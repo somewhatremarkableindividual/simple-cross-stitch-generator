@@ -1,0 +1,2374 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Turn a photo into a DMC cross stitch chart. Runs entirely in your browser; your photos and thread list never leave your device.">
+<meta name="theme-color" content="#2c47b0">
+<meta name="apple-mobile-web-app-title" content="Cross Stitch">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Cross Stitch Pattern Generator</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a workbench — controls rail on the left, the fabric "hoop" stage on the right, floss legend beneath. */
+:root{
+  --bg:#e9ecf1; --panel:#ffffff; --ink:#18202d; --muted:#5a6476; --line:#d5dae3;
+  --accent:#2c47b0; --accent-ink:#ffffff; --accent-soft:#e3e8fa; --accent-text:#2c47b0;
+  --stage:#d9dde5; --fabric:#f4f2ec; --warn:#a2560d; --danger:#b3261e;
+  --f-display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --f-body:"IBM Plex Sans", -apple-system, "Segoe UI", system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11141b; --panel:#191e28; --ink:#e5e8ee; --muted:#98a1b1; --line:#2a313f;
+  --accent:#8fa3ff; --accent-ink:#0f1530; --accent-soft:#242c4a; --accent-text:#8fa3ff;
+  --stage:#0c0f14; --fabric:#f4f2ec; --warn:#e3a35d; --danger:#ff8a80; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#11141b; --panel:#191e28; --ink:#e5e8ee; --muted:#98a1b1; --line:#2a313f;
+  --accent:#8fa3ff; --accent-ink:#0f1530; --accent-soft:#242c4a; --accent-text:#8fa3ff;
+  --stage:#0c0f14; --fabric:#f4f2ec; --warn:#e3a35d; --danger:#ff8a80; color-scheme:dark }
+html,body{height:auto}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 var(--f-body);-webkit-text-size-adjust:100%}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;max-width:1520px;margin:0 auto;
+  padding-block:18px 6px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.brand{display:flex;align-items:center;gap:12px;min-width:0;flex:1 1 320px}
+.brand-mark{width:36px;height:36px;flex:none;border-radius:8px;background:var(--accent);display:grid;place-items:center}
+.brand h1{font:700 1.45rem/1.1 var(--f-display);letter-spacing:-.01em;margin:0;text-wrap:balance}
+.brand p{margin:2px 0 0;color:var(--muted);font-size:.86rem}
+@media (max-width:520px){.brand p{display:none}.brand h1{font-size:1.25rem}.actions .btn{padding:7px 11px}}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:8px 13px;cursor:pointer;font-weight:500;display:inline-flex;align-items:center;gap:7px;min-height:38px}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.small{padding:5px 10px;min-height:30px;font-size:.84rem}
+.btn:disabled{opacity:.5;cursor:default}
+
+.app{display:grid;grid-template-columns:330px minmax(0,1fr);grid-template-areas:"controls stage" "controls legend";
+  gap:16px 20px;max-width:1520px;margin:0 auto;align-items:start;
+  padding-block:10px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.controls{grid-area:controls;position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto;
+  background:var(--panel);border:1px solid var(--line);border-radius:12px;overscroll-behavior:contain}
+.stage-card{grid-area:stage;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.legend-card{grid-area:legend;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:12px}
+
+.sec{padding:14px 16px;border-top:1px solid var(--line);display:grid;gap:11px}
+.sec:first-child{border-top:0}
+.sec h2{font:600 .72rem/1 var(--f-body);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0}
+.row{display:grid;gap:4px}
+.row-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.row-head label{font-weight:500}
+.val{font:500 .82rem var(--f-mono);color:var(--accent-text);font-variant-numeric:tabular-nums;white-space:nowrap}
+.hint{color:var(--muted);font-size:.8rem;margin:0}
+input[type=range]{width:100%;accent-color:var(--accent);margin:2px 0;height:22px}
+.dims{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:end}
+.num{display:grid;gap:3px}
+.num span{font-size:.78rem;color:var(--muted)}
+.num input,select{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:7px;background:var(--bg);font-variant-numeric:tabular-nums;min-height:36px}
+.lock{border:1px solid var(--line);background:var(--bg);border-radius:7px;width:38px;height:36px;display:grid;place-items:center;cursor:pointer}
+.lock[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-text)}
+.check{display:flex;align-items:center;gap:8px;font-weight:500;cursor:pointer}
+.check input{width:18px;height:18px;accent-color:var(--accent)}
+.fabric-row{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center}
+input[type=color]{width:44px;height:34px;border:1px solid var(--line);border-radius:7px;background:var(--bg);padding:2px}
+.readout{font:500 .82rem var(--f-mono);color:var(--muted);font-variant-numeric:tabular-nums}
+
+.drop{display:grid;grid-template-columns:72px 1fr;gap:12px;align-items:center;border:1.5px dashed var(--line);border-radius:10px;padding:10px;cursor:pointer}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.thumb{width:72px;height:72px;border-radius:6px;background:var(--bg);overflow:hidden;display:grid;place-items:center}
+.thumb canvas{max-width:100%;max-height:100%}
+.drop strong{display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.drop .hint{margin-top:2px}
+
+.seg{display:flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--bg)}
+.seg button{flex:1 1 auto;border:0;background:transparent;padding:7px 11px;cursor:pointer;font-size:.84rem;font-weight:500;color:var(--muted);min-height:34px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+
+.stage-bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding:10px 12px;border-bottom:1px solid var(--line)}
+.stage-bar .grow{flex:1 1 auto}
+.mini{display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--muted)}
+.mini input[type=range]{width:110px}
+.stage-wrap{position:relative}
+.stage{position:relative;height:min(68vh,820px);overflow:auto;background:var(--stage);-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;overscroll-behavior:contain}
+#sizer{position:relative}
+#chart{position:sticky;top:0;left:0;display:block}
+.busy{position:absolute;top:10px;right:12px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:.78rem;font-weight:500;pointer-events:none;opacity:0;transition:opacity .15s}
+.busy.on{opacity:1}
+.stage.picking #chart{cursor:crosshair}
+.pick-banner{position:absolute;left:50%;transform:translateX(-50%);bottom:12px;width:max-content;max-width:calc(100% - 24px);display:flex;align-items:center;gap:12px;background:var(--panel);color:var(--ink);border:1px solid var(--accent);border-radius:10px;padding:6px 6px 6px 12px;font-size:.86rem;font-weight:500;box-shadow:0 6px 18px rgba(0,0,0,.2);z-index:3}
+#btn-pick-top[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.pin-add{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:6px;align-items:center}
+.pin-add input{min-width:0;width:100%;padding:6px 9px;border:1px solid var(--line);border-radius:7px;background:var(--bg);min-height:32px;font-variant-numeric:tabular-nums}
+.pin-chip{padding-left:3px}
+.pin-sw{display:inline-flex !important;align-items:center;gap:6px;width:auto !important;height:auto !important;border-radius:999px !important;padding:2px 6px 2px 2px !important;font:500 .8rem var(--f-mono);color:var(--ink) !important}
+.pin-sw i{display:inline-block;width:18px;height:18px;border-radius:50%;border:1px solid rgba(0,0,0,.15)}
+.swap{border:1px solid var(--line);border-radius:8px;padding:8px;display:grid;gap:8px;background:var(--bg);font-size:.82rem}
+.swap-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.swap-opt{display:grid;justify-items:center;gap:3px;border:1px solid var(--line);border-radius:7px;background:var(--panel);padding:5px 2px;cursor:pointer;font:500 .74rem var(--f-mono)}
+.swap-opt:hover{border-color:var(--accent)}
+.swap-opt i{width:100%;height:20px;border-radius:4px;border:1px solid rgba(0,0,0,.1)}
+.swap-opt.owned span::after{content:" ✓";color:var(--accent-text)}
+.hint.warn{color:var(--warn)}
+.stats{display:flex;flex-wrap:wrap;gap:6px 18px;padding:10px 12px;border-top:1px solid var(--line);font:500 .8rem var(--f-mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.stats b{color:var(--ink);font-weight:500}
+.stats .good{color:var(--accent-text)}
+.hover{padding:0 12px 10px;font:.8rem var(--f-mono);color:var(--muted);min-height:1.6em}
+
+.legend-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:14px 16px 8px}
+.legend-head h2{font:700 1.05rem var(--f-display);margin:0}
+.legend-head .grow{flex:1 1 auto}
+.notes{padding:0 16px 10px;display:grid;gap:8px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:3px 4px 3px 10px;font:.78rem var(--f-mono);background:var(--bg)}
+.chip button{border:0;background:transparent;cursor:pointer;width:22px;height:22px;border-radius:50%;color:var(--muted)}
+.chip button:hover{background:var(--line)}
+details.merges summary{cursor:pointer;color:var(--muted);font-size:.84rem}
+details.merges ul{margin:6px 0 0;padding-left:18px;font:.78rem var(--f-mono);color:var(--muted);columns:2 220px}
+.table-wrap{overflow-x:auto;padding:0 8px 12px}
+table{border-collapse:collapse;width:100%;min-width:620px}
+th{font:600 .7rem var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:left;padding:8px;border-bottom:1px solid var(--line)}
+td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+td.n{text-align:right;font:500 .84rem var(--f-mono);font-variant-numeric:tabular-nums}
+th.n{text-align:right}
+tr.legend-row{cursor:pointer}
+tr.legend-row:hover td{background:var(--accent-soft)}
+tr.legend-row.on td{background:var(--accent-soft)}
+.sw{width:30px;height:30px;border-radius:6px;display:grid;place-items:center;border:1px solid rgba(0,0,0,.12)}
+.code{font:500 .9rem var(--f-mono)}
+.tag{font:600 .66rem var(--f-body);letter-spacing:.06em;text-transform:uppercase;color:var(--accent-text);border:1px solid currentColor;border-radius:4px;padding:1px 5px;margin-left:6px;white-space:nowrap}
+td select{min-height:32px;padding:4px 6px;font-size:.82rem;max-width:200px}
+.empty-legend{padding:8px 16px 18px;color:var(--muted)}
+
+.toast{display:flex;align-items:center;gap:14px;position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--bg);padding:9px 15px;border-radius:8px;font-size:.88rem;opacity:0;pointer-events:none;transition:all .2s;z-index:50;max-width:calc(100vw - 32px)}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+.toast button{border:0;background:transparent;color:inherit;font-weight:700;text-decoration:underline;cursor:pointer;padding:4px 2px;min-height:30px}
+
+.btn.danger{color:var(--danger)}
+.btn.danger.armed{background:var(--danger);border-color:var(--danger);color:var(--panel)}
+.own-btn{border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:4px 9px;font-size:.8rem;font-weight:500;cursor:pointer;white-space:nowrap;min-height:30px}
+.own-btn.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-text)}
+.buy{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:.86rem}
+.buy b{font:500 .84rem var(--f-mono)}
+.sheet-backdrop{position:fixed;inset:0;z-index:40;background:rgba(8,12,20,.5);display:grid;place-items:center;
+  padding-block:16px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.sheet{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:14px;width:min(920px,100%);height:min(780px,calc(100vh - 32px));
+  display:flex;flex-direction:column;gap:10px;padding:16px;box-shadow:0 20px 60px rgba(0,0,0,.35);min-width:0}
+.sheet > *:not(.inv-scroll){flex:none}
+.sheet-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.sheet-head h2{font:700 1.25rem var(--f-display);margin:0}
+.inv-add{display:flex;gap:8px}
+.inv-add input{flex:1 1 auto;min-width:0;padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:var(--bg);min-height:40px}
+.inv-scroll{flex:1 1 auto;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;margin:0 -6px;padding:0 6px 6px}
+.inv-grid{position:relative}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));grid-auto-rows:max-content;gap:8px;padding:2px 0 12px}
+.tile{display:block;width:100%;position:relative;text-align:left;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:6px 6px 8px;cursor:pointer;min-width:0;color:var(--ink)}
+.tile:hover{border-color:var(--accent)}
+.tile-sw{display:block;position:relative;height:34px;border-radius:6px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.1)}
+.tile-code{display:block;font:600 .86rem/1.2 var(--f-mono);margin-top:7px}
+.tile-name{display:block;font-size:.72rem;line-height:1.25;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent);background:var(--accent-soft)}
+.tile-mark{position:absolute;top:5px;right:5px;width:22px;height:22px;border-radius:50%;background:var(--panel);color:var(--accent-text);display:none;text-align:center;line-height:20px;font-size:.8rem;font-weight:700;border:1px solid var(--line)}
+.tile.on .tile-mark{display:block}
+.inv-grid.owned .tile-mark{color:var(--danger)}
+.fam h4{position:sticky;top:0;z-index:1;margin:0;padding:8px 0 6px;background:var(--panel);font:600 .78rem var(--f-body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:flex;gap:8px;align-items:baseline}
+.fam h4 span{font:500 .74rem var(--f-mono);letter-spacing:0;text-transform:none}
+.fam-chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none;flex:none}
+.fam-chips::-webkit-scrollbar{display:none}
+.fam-chip{flex:none;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;background:var(--bg);padding:5px 11px 5px 6px;font-size:.8rem;font-weight:500;cursor:pointer;white-space:nowrap;color:var(--ink)}
+.fam-chip:hover{border-color:var(--accent)}
+.fam-chip i{width:16px;height:16px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)}
+.data-note{margin:0;font-weight:500}
+.data-actions{display:flex;flex-wrap:wrap;gap:8px}
+.inv-empty{grid-column:1/-1;padding:24px 4px}
+.sheet-foot{display:flex;flex-wrap:wrap;gap:8px;align-items:center;flex:none}
+.sheet-foot .grow{flex:1 1 auto}
+@media (max-width:640px){
+  .sheet-backdrop{padding:0;place-items:end stretch}
+  .sheet{width:100%;height:calc(100vh - 20px);height:calc(100dvh - 20px);border-radius:14px 14px 0 0;border-bottom:0;
+    padding-bottom:calc(14px + env(safe-area-inset-bottom,0px));padding-left:max(14px,env(safe-area-inset-left,0px));padding-right:max(14px,env(safe-area-inset-right,0px))}
+  .tiles{grid-template-columns:repeat(auto-fill,minmax(92px,1fr))}
+}
+
+
+/* ---- Polish ---- */
+.resume{flex:1 1 100%;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 14px;border:1px solid var(--accent);background:var(--accent-soft);border-radius:12px;padding:10px 12px}
+.resume p{margin:0;font-weight:500;min-width:0}
+.resume-actions{display:flex;gap:8px}
+.cloud-status{margin:0;display:flex;gap:8px;align-items:baseline;font-weight:500}
+.cloud-status::before{content:"";width:9px;height:9px;border-radius:50%;flex:none;background:var(--warn);transform:translateY(-1px)}
+.cloud-status[data-state="on"]::before{background:#2e9d62}
+.cloud-status[data-state="starting"]::before{background:var(--muted)}
+.saved-list{display:grid;grid-template-columns:max-content 1fr;gap:6px 14px;margin:0;font-size:.86rem}
+.saved-list dt{font-weight:600}
+.saved-list dd{margin:0;color:var(--muted)}
+@media (max-width:520px){.saved-list{grid-template-columns:1fr;gap:2px}.saved-list dd{margin-bottom:6px}}
+body{background:radial-gradient(900px 520px at 6% -10%, var(--accent-soft), transparent 70%), radial-gradient(760px 480px at 104% -6%, color-mix(in srgb, var(--accent-soft) 70%, transparent), transparent 70%), var(--bg);background-color:var(--bg);background-repeat:no-repeat}
+.brand-mark{border-radius:11px;background:linear-gradient(140deg, var(--accent), color-mix(in oklab, var(--accent) 62%, var(--ink)));box-shadow:0 8px 18px -8px var(--accent)}
+.brand h1{letter-spacing:-.015em}
+.btn{border-radius:9px;transition:border-color .15s, transform .15s, box-shadow .15s}
+.btn:hover{transform:translateY(-1px)}
+.btn.primary{background:linear-gradient(160deg, var(--accent), color-mix(in oklab, var(--accent) 80%, var(--ink)));box-shadow:0 6px 14px -8px var(--accent)}
+.btn.icon{width:40px;padding:0;justify-content:center}
+.controls,.stage-card,.legend-card{border-radius:14px;box-shadow:0 1px 0 color-mix(in srgb, var(--ink) 4%, transparent), 0 14px 34px -22px color-mix(in srgb, var(--accent) 55%, transparent)}
+.sec h2{display:flex;align-items:center;gap:8px}
+.sec h2::before{content:"";width:9px;height:9px;flex:none;background:linear-gradient(45deg, transparent 40%, var(--accent-text) 40% 60%, transparent 60%), linear-gradient(-45deg, transparent 40%, var(--accent-text) 40% 60%, transparent 60%)}
+.seg{border-radius:11px;padding:3px;gap:3px}
+.seg button{border-radius:8px;transition:background .15s,color .15s}
+.stage{background-color:var(--stage);background-image:radial-gradient(color-mix(in srgb, var(--ink) 10%, transparent) 1px, transparent 1.5px);background-size:12px 12px}
+.drop{border-radius:12px}
+.thumb{border-radius:8px;box-shadow:0 2px 8px -4px rgba(0,0,0,.35)}
+input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;height:24px;--p:50%;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:999px;background:linear-gradient(to right, var(--accent) 0 var(--p), var(--line) var(--p) 100%)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:18px;height:18px;border-radius:50%;background:var(--panel);border:2px solid var(--accent-text);margin-top:-6px;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+input[type=range]::-moz-range-track{height:6px;border-radius:999px;background:var(--line)}
+input[type=range]::-moz-range-progress{height:6px;border-radius:999px;background:var(--accent)}
+input[type=range]::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--panel);border:2px solid var(--accent)}
+input[type=range]:focus-visible{outline-offset:4px}
+.settings-sheet{height:auto;max-height:min(760px, calc(100vh - 32px));grid-template-rows:none;overflow:auto;width:min(640px,100%);gap:18px;padding:18px}
+.set-block{display:grid;gap:10px}
+.set-block h3{font:600 .72rem/1 var(--f-body);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0}
+.theme-grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(118px, 1fr));gap:10px}
+.theme-card{display:grid;gap:7px;padding:6px 6px 9px;border:1px solid var(--line);border-radius:12px;background:var(--panel);cursor:pointer;text-align:left;transition:transform .15s, border-color .15s}
+.theme-card:hover{transform:translateY(-2px);border-color:var(--accent)}
+.theme-card.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+.tc-prev{display:block;height:68px;border-radius:8px;padding:9px;overflow:hidden}
+.tc-panel{display:grid;gap:5px;height:100%;border:1px solid;border-radius:6px;padding:7px;align-content:start;position:relative}
+.tc-panel i{display:block;width:22px;height:8px;border-radius:4px}
+.tc-panel b{display:block;height:4px;border-radius:2px;width:80%}
+.tc-panel em{position:absolute;left:7px;right:7px;bottom:7px;height:5px;border-radius:3px;overflow:hidden}
+.tc-panel em span{display:block;height:100%;width:58%;border-radius:3px}
+.tc-name{font-weight:600;font-size:.86rem;padding:0 3px;display:flex;align-items:center;gap:6px}
+.theme-card.on .tc-name::after{content:"✓";color:var(--accent-text);font-size:.8rem}
+@media (max-width:640px){ .settings-sheet{height:auto;max-height:calc(100dvh - 20px)} .theme-grid{grid-template-columns:repeat(2, 1fr)} }
+@media (prefers-reduced-motion:reduce){.btn:hover,.theme-card:hover{transform:none}}
+
+@media (max-width:900px){
+  .num input,select,.inv-add input{font-size:16px}
+  .app{grid-template-columns:minmax(0,1fr);grid-template-areas:"stage" "controls" "legend"}
+  .controls{position:static;max-height:none;overflow:visible}
+  .stage-card{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;box-shadow:0 8px 20px rgba(0,0,0,.15)}
+  .stage{height:36vh}
+  .stage-bar{gap:8px 10px;padding:8px 10px}
+  .mini input[type=range]{width:84px}
+  .seg button{padding:6px 9px}
+  body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <div class="brand-mark" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 22 22"><g stroke="var(--accent-ink)" stroke-width="3" stroke-linecap="round"><path d="M4 18 18 4"/><path d="M4 4l14 14"/></g></svg>
+    </div>
+    <div>
+      <h1>Cross Stitch Pattern Generator</h1>
+      <p>Photo to DMC chart with fewer stray stitches and fewer one-off colors.</p>
+    </div>
+  </div>
+  <div class="actions">
+    <button class="btn" id="btn-open" type="button">Open image</button>
+    <button class="btn" id="btn-inv-top" type="button">My threads</button>
+    <button class="btn" id="btn-png" type="button">Chart PNG</button>
+    <button class="btn primary" id="btn-pdf" type="button">Chart PDF</button>
+    <button class="btn" id="btn-save" type="button">Save project</button>
+    <button class="btn icon" id="btn-settings" type="button" aria-label="Settings" title="Settings"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+  </div>
+  <input id="file" type="file" accept="image/*,.json,application/json" hidden>
+</header>
+
+<main class="app">
+  <aside class="controls" aria-label="Pattern settings">
+    <section class="sec">
+      <h2>Image</h2>
+      <div class="drop" id="drop" role="button" tabindex="0" aria-label="Choose an image">
+        <div class="thumb" id="thumb"></div>
+        <div style="min-width:0">
+          <strong id="img-name">Sample: sunset hills</strong>
+          <p class="hint" id="img-meta">Tap to choose a photo, or drop or paste one here.</p>
+        </div>
+      </div>
+      <button class="btn small" id="btn-sample" type="button">Load sample image</button>
+    </section>
+
+    <section class="sec">
+      <h2>Size</h2>
+      <div class="dims">
+        <label class="num" for="w"><span>Width (stitches)</span><input id="w" type="number" min="10" max="500" inputmode="numeric"></label>
+        <button class="lock" id="lock" type="button" aria-pressed="true" title="Keep proportions" aria-label="Keep proportions">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6.5 9.5 9.5 6.5"/><path d="M7 4.5 8.6 3a2.6 2.6 0 0 1 3.7 3.7L10.8 8.3"/><path d="M9 11.5 7.4 13A2.6 2.6 0 0 1 3.7 9.3L5.2 7.7"/></svg>
+        </button>
+        <label class="num" for="h"><span>Height (stitches)</span><input id="h" type="number" min="10" max="500" inputmode="numeric"></label>
+      </div>
+      <label class="num" for="count"><span>Fabric</span>
+        <select id="count">
+          <option value="11">11-count Aida</option>
+          <option value="14">14-count Aida</option>
+          <option value="16">16-count Aida</option>
+          <option value="18">18-count Aida</option>
+          <option value="12.5">25-count evenweave, over 2</option>
+          <option value="14.001">28-count evenweave, over 2</option>
+          <option value="16.001">32-count linen, over 2</option>
+        </select>
+      </label>
+      <div class="readout" id="finished">—</div>
+    </section>
+
+    <section class="sec">
+      <h2>Colors</h2>
+      <div class="row">
+        <div class="row-head"><label for="maxColors">Thread colors</label><span class="val" id="maxColors-v"></span></div>
+        <input id="maxColors" type="range" min="2" max="80" step="1">
+        <p class="hint">Upper limit for the main palette. Raise it if the pattern looks too flat.</p>
+      </div>
+      <div class="row">
+        <div class="row-head"><label for="accents">Small detail colors</label><span class="val" id="accents-v"></span></div>
+        <input id="accents" type="range" min="0" max="12" step="1">
+        <p class="hint">Extra colors kept for small, very different areas such as eyes or highlights. These skip the minimum below.</p>
+      </div>
+      <div class="row">
+        <div class="row-head"><label for="hue">Hue separation</label><span class="val" id="hue-v"></span></div>
+        <input id="hue" type="range" min="0" max="100" step="5">
+        <p class="hint">Higher keeps similar-brightness colors apart, like dark purple next to dark brown. Lower favors smooth shading.</p>
+      </div>
+      <div class="row">
+        <div class="row-head"><label for="pin-q">Colors to always keep</label><span class="val" id="pin-v">none</span></div>
+        <p class="hint">Kept colors stay in the pattern when you lower the color count. Pick one from the photo or type a DMC number.</p>
+        <div class="chips" id="pin-chips"></div>
+        <div class="swap" id="pin-swap" hidden></div>
+        <div class="pin-add">
+          <button class="btn small" id="btn-pick" type="button">Pick from photo</button>
+          <input id="pin-q" type="text" list="dmc-list" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="DMC #" aria-label="DMC number to keep">
+          <button class="btn small" id="pin-addbtn" type="button">Keep</button>
+        </div>
+        <datalist id="dmc-list"></datalist>
+      </div>
+      <div class="row">
+        <div class="row-head"><label for="minStitches">Minimum stitches per color</label><span class="val" id="minStitches-v"></span></div>
+        <input id="minStitches" type="range" min="0" max="300" step="1">
+        <p class="hint">Any color used less than this is folded into the closest color already in the pattern.</p>
+      </div>
+      <label class="check"><input id="skipFabric" type="checkbox"> Leave background unstitched</label>
+      <div class="fabric-row" id="fabric-opts">
+        <input id="fabric" type="color" aria-label="Background color to leave unstitched">
+        <div class="row">
+          <div class="row-head"><label for="fabricTol">Match tolerance</label><span class="val" id="fabricTol-v"></span></div>
+          <input id="fabricTol" type="range" min="1" max="60" step="1">
+        </div>
+      </div>
+    </section>
+
+    <section class="sec">
+      <h2>My threads</h2>
+      <label class="check"><input id="ownedOnly" type="checkbox"> Only use threads I own</label>
+      <p class="hint" id="own-summary"></p>
+      <button class="btn small" id="btn-inv" type="button">Manage my threads</button>
+    </section>
+
+    <section class="sec">
+      <h2>Clean-up</h2>
+      <div class="row">
+        <div class="row-head"><label for="specks">Remove stray groups up to</label><span class="val" id="specks-v"></span></div>
+        <input id="specks" type="range" min="0" max="12" step="1">
+        <p class="hint">Isolated clusters this size or smaller take the color around them. Lines and outlines are kept.</p>
+      </div>
+      <div class="row">
+        <div class="row-head"><label for="dither">Blending (dither)</label><span class="val" id="dither-v"></span></div>
+        <input id="dither" type="range" min="0" max="100" step="5">
+        <p class="hint">Off gives clean blocks of color. Higher mixes threads for smoother gradients but adds scattered stitches.</p>
+      </div>
+    </section>
+
+    <section class="sec">
+      <h2>Image adjustments</h2>
+      <div class="row">
+        <div class="row-head"><label for="sharpen">Edge sharpening</label><span class="val" id="sharpen-v"></span></div>
+        <input id="sharpen" type="range" min="0" max="100" step="5">
+      </div>
+      <div class="row">
+        <div class="row-head"><label for="brightness">Brightness</label><span class="val" id="brightness-v"></span></div>
+        <input id="brightness" type="range" min="-50" max="50" step="1">
+      </div>
+      <div class="row">
+        <div class="row-head"><label for="contrast">Contrast</label><span class="val" id="contrast-v"></span></div>
+        <input id="contrast" type="range" min="-50" max="80" step="1">
+      </div>
+      <div class="row">
+        <div class="row-head"><label for="saturation">Saturation</label><span class="val" id="saturation-v"></span></div>
+        <input id="saturation" type="range" min="-100" max="200" step="5">
+      </div>
+      <button class="btn small" id="btn-reset" type="button">Reset all settings</button>
+    </section>
+  </aside>
+
+  <section class="stage-card" aria-label="Pattern preview">
+    <div class="stage-bar">
+      <div class="seg" id="view" role="group" aria-label="Preview style">
+        <button type="button" data-v="stitched">Stitched</button>
+        <button type="button" data-v="blocks">Blocks</button>
+        <button type="button" data-v="symbols">Symbols</button>
+        <button type="button" data-v="bw">Print</button>
+      </div>
+      <div class="grow"></div>
+      <label class="mini" for="zoom">Zoom <input id="zoom" type="range" min="2" max="40" step="1"></label>
+      <button class="btn small" id="btn-fit" type="button">Fit</button>
+      <button class="btn small" id="btn-pick-top" type="button" aria-pressed="false">Keep a color</button>
+      <label class="mini" for="overlay">Original <input id="overlay" type="range" min="0" max="100" step="5"></label>
+    </div>
+    <div class="stage-wrap">
+    <div class="stage" id="stage">
+      <div id="sizer"><canvas id="chart" width="10" height="10"></canvas></div>
+    </div>
+      <div class="busy" id="busy">Updating…</div>
+      <div class="pick-banner" id="pick-banner" hidden><span>Showing your photo. Tap the color you want to keep.</span><button type="button" class="btn small" id="pick-cancel">Cancel</button></div>
+    </div>
+    </div>
+    <div class="stats" id="stats"></div>
+    <div class="hover" id="hover">Hover or tap a stitch to see its thread.</div>
+  </section>
+
+  <section class="legend-card" aria-label="Thread list">
+    <div class="legend-head">
+      <h2>Threads</h2>
+      <span class="readout" id="legend-sum"></span>
+      <div class="grow"></div>
+      <button class="btn small" id="btn-clear-hl" type="button" hidden>Show all colors</button>
+    </div>
+    <div class="notes" id="notes"></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Key</th><th>DMC</th><th>Name</th><th class="n">Stitches</th><th class="n">Skeins</th><th>Always keep</th><th>My threads</th><th>Merge into</th></tr></thead>
+        <tbody id="legend"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+<div class="sheet-backdrop" id="inv" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="inv-title">
+    <div class="sheet-head">
+      <div>
+        <h2 id="inv-title">My threads</h2>
+        <p class="hint" id="inv-sync">Saved on this device</p>
+      </div>
+      <button class="btn small primary" id="inv-close" type="button">Done</button>
+    </div>
+    <div class="inv-add">
+      <input id="inv-q" type="text" inputmode="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
+        placeholder="DMC numbers (310 321 3865) or a color name" aria-label="Add threads by number or search">
+      <button class="btn primary small" id="inv-addbtn" type="button">Add</button>
+    </div>
+    <p class="hint" id="inv-msg">Tap a color to add or remove it. Type several numbers and press Add to add them all at once.</p>
+    <div class="seg" id="inv-tabs" role="group" aria-label="Which threads to show">
+      <button type="button" data-t="owned">My threads</button>
+      <button type="button" data-t="all">All DMC</button>
+    </div>
+    <div class="fam-chips" id="inv-fams" aria-label="Jump to a color family"></div>
+    <div class="inv-scroll" id="inv-scroll"><div class="inv-grid" id="inv-grid"></div></div>
+    <div class="sheet-foot">
+      <button class="btn small" id="inv-from-pattern" type="button">Add every thread in this pattern</button>
+      <button class="btn small" id="inv-copy" type="button">Copy list</button>
+      <div class="grow"></div>
+      <button class="btn small danger" id="inv-clear" type="button">Clear list</button>
+    </div>
+  </div>
+</div>
+<div class="sheet-backdrop" id="settings" hidden>
+  <div class="sheet settings-sheet" role="dialog" aria-modal="true" aria-labelledby="set-title">
+    <div class="sheet-head">
+      <div>
+        <h2 id="set-title">Settings</h2>
+        <p class="hint">Your look is saved on this device. Pattern colors are never affected.</p>
+      </div>
+      <button class="btn small primary" id="set-close" type="button">Done</button>
+    </div>
+    <div class="set-block">
+      <h3>Light or dark</h3>
+      <div class="seg" id="mode-seg" role="group" aria-label="Light or dark">
+        <button type="button" data-mode="auto">Match device</button>
+        <button type="button" data-mode="light">Light</button>
+        <button type="button" data-mode="dark">Dark</button>
+      </div>
+    </div>
+    <div class="set-block">
+      <h3>Bold colors</h3>
+      <div class="theme-grid" id="themes-bold"></div>
+    </div>
+    <div class="set-block">
+      <h3>Pastels</h3>
+      <div class="theme-grid" id="themes-pastel"></div>
+    </div>
+    <div class="set-block">
+      <h3>Your data</h3>
+      <p class="data-note">Your threads, current pattern and theme are saved privately in this browser on this device. Anyone else using the app has their own list on their own device.</p>
+      <p class="hint">To move everything to another device, save a backup file here, send it over (AirDrop, iCloud Drive or email), then open it with Restore on the other device. Keep a backup too: clearing website data, or Safari's cleanup of sites you haven't opened in a while, can erase what's saved in the browser.</p>
+      <div class="data-actions"><button class="btn small primary" id="data-backup" type="button">Save backup file</button><button class="btn small" id="data-restore" type="button">Restore from backup</button></div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"><span id="toast-msg"></span><button type="button" id="toast-act" hidden></button></div>
+
+<script type="text/plain" id="worker-src">
+"use strict";
+let DMC = null;      // Float32Array of OKLab, 3 per thread, chroma-weighted
+let DMC0 = null;     // unweighted OKLab
+let NDMC = 0, CW = 0;
+// Hue and saturation differences are weighted above lightness so that dark purples, browns and
+// greens stay separate threads instead of collapsing into one muddy shade.
+function setChroma(cw) {
+  if (cw === CW) return; CW = cw;
+  DMC = new Float32Array(DMC0);
+  for (let k = 0; k < NDMC; k++) { DMC[k * 3 + 1] *= cw; DMC[k * 3 + 2] *= cw; }
+}
+let SRC = null;      // {w,h,lin: Float32Array rgba (linear rgb, alpha 0..1)}
+let DS = { key: "", lab: null, alpha: null };
+
+const LUT = new Float32Array(256);
+for (let i = 0; i < 256; i++) { const c = i / 255; LUT[i] = c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }
+
+function oklab(r, g, b, out, o) {
+  const l = 0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b;
+  const m = 0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b;
+  const s = 0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b;
+  const l_ = Math.cbrt(l), m_ = Math.cbrt(m), s_ = Math.cbrt(s);
+  out[o] = 0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_;
+  out[o + 1] = 1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_;
+  out[o + 2] = 0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_;
+}
+function d2(A, i, B, j) { const x = A[i] - B[j], y = A[i + 1] - B[j + 1], z = A[i + 2] - B[j + 2]; return x * x + y * y + z * z; }
+function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+let ALLOW = null;    // indices of threads the stitcher owns, when restricted
+function nearestDMC(A, i) {
+  let best = 0, bd = Infinity;
+  if (ALLOW) { for (let q = 0; q < ALLOW.length; q++) { const k = ALLOW[q], d = d2(A, i, DMC, k * 3); if (d < bd) { bd = d; best = k; } } return best; }
+  for (let k = 0; k < NDMC; k++) { const d = d2(A, i, DMC, k * 3); if (d < bd) { bd = d; best = k; } }
+  return best;
+}
+function palLab(pal) { const P = new Float32Array(pal.length * 3); pal.forEach((d, k) => { P[k * 3] = DMC[d * 3]; P[k * 3 + 1] = DMC[d * 3 + 1]; P[k * 3 + 2] = DMC[d * 3 + 2]; }); return P; }
+function nearestIn(A, i, P, n) { let best = 0, bd = Infinity; for (let k = 0; k < n; k++) { const d = d2(A, i, P, k * 3); if (d < bd) { bd = d; best = k; } } return best; }
+function dedupe(a) { const s = []; for (const x of a) if (s.indexOf(x) < 0) s.push(x); return s; }
+
+// Area-averaged downsampling in linear light. Each stitch is the true average of the pixels it covers,
+// including fractional pixel coverage, so thin features blend in proportion instead of being skipped.
+function downsample(W, H) {
+  const key = W + "x" + H;
+  if (DS.key === key) return DS;
+  const sw = SRC.w, sh = SRC.h, px = SRC.lin, sx = sw / W, sy = sh / H;
+  const lab = new Float32Array(W * H * 3), alpha = new Float32Array(W * H);
+  for (let ty = 0; ty < H; ty++) {
+    const y0 = ty * sy, y1 = y0 + sy, iy0 = Math.floor(y0), iy1 = Math.min(sh, Math.ceil(y1));
+    for (let tx = 0; tx < W; tx++) {
+      const x0 = tx * sx, x1 = x0 + sx, ix0 = Math.floor(x0), ix1 = Math.min(sw, Math.ceil(x1));
+      let r = 0, g = 0, b = 0, a = 0, ws = 0;
+      for (let iy = iy0; iy < iy1; iy++) {
+        const wy = Math.min(y1, iy + 1) - Math.max(y0, iy); if (wy <= 0) continue;
+        const row = iy * sw;
+        for (let ix = ix0; ix < ix1; ix++) {
+          const wx = Math.min(x1, ix + 1) - Math.max(x0, ix); if (wx <= 0) continue;
+          const w = wx * wy, p = (row + ix) * 4, pa = px[p + 3] * w;
+          r += px[p] * pa; g += px[p + 1] * pa; b += px[p + 2] * pa; a += pa; ws += w;
+        }
+      }
+      const i = ty * W + tx;
+      alpha[i] = ws ? a / ws : 0;
+      if (a > 0) oklab(r / a, g / a, b / a, lab, i * 3); else { lab[i * 3] = 1; lab[i * 3 + 1] = 0; lab[i * 3 + 2] = 0; }
+    }
+  }
+  DS = { key, lab, alpha };
+  return DS;
+}
+
+// Kept colors enter as fixed centers: they claim their pixels first, and the free centers
+// spread over whatever is left, so a dominant green can no longer absorb a small red.
+function kmeans(P, n, K, rnd, FX) {
+  const nf = FX ? FX.length / 3 : 0;
+  K = Math.min(K + nf, n + nf);
+  const C = new Float32Array(Math.max(1, K) * 3);
+  const D = new Float32Array(n).fill(Infinity);
+  let k;
+  if (nf) { C.set(FX); for (let c = 0; c < nf; c++) for (let i = 0; i < n; i++) { const d = d2(P, i * 3, C, c * 3); if (d < D[i]) D[i] = d; } k = nf; }
+  else { const f = Math.floor(rnd() * n); C[0] = P[f * 3]; C[1] = P[f * 3 + 1]; C[2] = P[f * 3 + 2]; k = 1; }
+  for (; k < K; k++) {
+    let sum = 0;
+    for (let i = 0; i < n; i++) { if (k > nf || !nf) { const d = d2(P, i * 3, C, (k - 1) * 3); if (d < D[i]) D[i] = d; } sum += D[i]; }
+    if (sum <= 1e-12) break;
+    let r = rnd() * sum, pick = n - 1;
+    for (let i = 0; i < n; i++) { r -= D[i]; if (r <= 0) { pick = i; break; } }
+    C[k * 3] = P[pick * 3]; C[k * 3 + 1] = P[pick * 3 + 1]; C[k * 3 + 2] = P[pick * 3 + 2];
+  }
+  K = k;
+  const S = new Float64Array(K * 3), N = new Uint32Array(K);
+  for (let it = 0; it < 14; it++) {
+    S.fill(0); N.fill(0);
+    for (let i = 0; i < n; i++) { const c = nearestIn(P, i * 3, C, K); N[c]++; S[c * 3] += P[i * 3]; S[c * 3 + 1] += P[i * 3 + 1]; S[c * 3 + 2] += P[i * 3 + 2]; }
+    let move = 0;
+    for (let c = nf; c < K; c++) if (N[c]) {
+      const a = S[c * 3] / N[c], b = S[c * 3 + 1] / N[c], z = S[c * 3 + 2] / N[c];
+      move = Math.max(move, Math.abs(a - C[c * 3]) + Math.abs(b - C[c * 3 + 1]) + Math.abs(z - C[c * 3 + 2]));
+      C[c * 3] = a; C[c * 3 + 1] = b; C[c * 3 + 2] = z;
+    }
+    if (move < 1e-4) break;
+  }
+  return { C, K, nf };
+}
+
+function counts(grid, n) { const c = new Uint32Array(n); for (let i = 0; i < grid.length; i++) if (grid[i] >= 0) c[grid[i]]++; return c; }
+
+// Fold any color under the minimum into the nearest color that is still in the pattern.
+function mergeRare(grid, pal, accent, minSt, log) {
+  if (minSt <= 1) return;
+  const P = palLab(pal);
+  for (let guard = 0; guard < 400; guard++) {
+    const cnt = counts(grid, pal.length);
+    let active = 0; for (let k = 0; k < pal.length; k++) if (cnt[k]) active++;
+    if (active <= 1) return;
+    let c = -1;
+    for (let k = 0; k < pal.length; k++) if (cnt[k] && cnt[k] < minSt && !accent.has(pal[k]) && (c < 0 || cnt[k] < cnt[c])) c = k;
+    if (c < 0) return;
+    let t = -1, bd = Infinity;
+    for (let k = 0; k < pal.length; k++) if (k !== c && cnt[k]) { const d = d2(P, c * 3, P, k * 3); if (d < bd) { bd = d; t = k; } }
+    for (let i = 0; i < grid.length; i++) if (grid[i] === c) grid[i] = t;
+    log.push([pal[c], pal[t], cnt[c]]);
+  }
+}
+
+function applyOverrides(grid, pal, ov) {
+  if (!ov.size) return pal;
+  const res = pal.map(d => { let x = d, g = 0; while (ov.has(x) && g++ < 30) x = ov.get(x); return x; });
+  const np = []; const remap = res.map(d => { let k = np.indexOf(d); if (k < 0) { k = np.length; np.push(d); } return k; });
+  for (let i = 0; i < grid.length; i++) if (grid[i] >= 0) grid[i] = remap[grid[i]];
+  return np;
+}
+
+const NB = [[-1, -1, 1], [0, -1, 2], [1, -1, 1], [-1, 0, 2], [1, 0, 2], [-1, 1, 1], [0, 1, 2], [1, 1, 1]];
+
+function isolated(grid, W, H) {
+  let n = 0;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = y * W + x, c = grid[i]; if (c < 0) continue;
+    let same = false;
+    for (const [dx, dy] of NB) { const X = x + dx, Y = y + dy; if (X < 0 || Y < 0 || X >= W || Y >= H) continue; if (grid[Y * W + X] === c) { same = true; break; } }
+    if (!same) n++;
+  }
+  return n;
+}
+
+// Replace small same-color clusters (8-connected) with the color that surrounds them most.
+// 8-connectivity keeps thin lines and diagonal outlines intact because they form one long cluster.
+function cleanSpecks(grid, W, H, maxSize, pal, accent) {
+  if (maxSize <= 0) return grid;
+  const N = W * H, P = palLab(pal);
+  const seen = new Uint8Array(N), stack = new Int32Array(N), cells = new Int32Array(N);
+  for (let pass = 0; pass < 3; pass++) {
+    seen.fill(0);
+    const out = grid.slice();
+    let changed = 0;
+    for (let s = 0; s < N; s++) {
+      if (seen[s]) continue;
+      const c = grid[s];
+      let sp = 0, size = 0; stack[sp++] = s; seen[s] = 1;
+      while (sp) {
+        const i = stack[--sp]; cells[size++] = i;
+        const x = i % W, y = (i / W) | 0;
+        for (const [dx, dy] of NB) { const X = x + dx, Y = y + dy; if (X < 0 || Y < 0 || X >= W || Y >= H) continue; const j = Y * W + X; if (!seen[j] && grid[j] === c) { seen[j] = 1; stack[sp++] = j; } }
+      }
+      if (size > maxSize) continue;
+      if (c >= 0 && accent.has(pal[c])) continue;
+      const tally = new Map();
+      for (let q = 0; q < size; q++) {
+        const i = cells[q], x = i % W, y = (i / W) | 0;
+        for (const [dx, dy, w] of NB) { const X = x + dx, Y = y + dy; if (X < 0 || Y < 0 || X >= W || Y >= H) continue; const n = grid[Y * W + X]; if (n !== c) tally.set(n, (tally.get(n) || 0) + w); }
+      }
+      let best = null, bs = -1, bd = Infinity;
+      for (const [n, sc] of tally) {
+        const dist = (c >= 0 && n >= 0) ? d2(P, c * 3, P, n * 3) : 1;
+        if (sc > bs || (sc === bs && dist < bd)) { best = n; bs = sc; bd = dist; }
+      }
+      if (best === null || bs < 3) continue;
+      for (let q = 0; q < size; q++) out[cells[q]] = best;
+      changed++;
+    }
+    grid = out;
+    if (!changed) break;
+  }
+  return grid;
+}
+
+function process(id, s) {
+  const t0 = Date.now();
+  const W = s.width, H = s.height, N = W * H;
+  const ds = downsample(W, H);
+  const cw = s.chroma || 1.6; setChroma(cw);
+  ALLOW = s.allowed && s.allowed.length ? Int16Array.from(s.allowed) : null;
+  const lab = new Float32Array(ds.lab);
+  for (let i = 0; i < N; i++) { lab[i * 3 + 1] *= cw; lab[i * 3 + 2] *= cw; }
+  const empty = new Uint8Array(N);
+  for (let i = 0; i < N; i++) if (ds.alpha[i] < 0.5) empty[i] = 1;
+
+  // Tone and color adjustments in OKLab (perceptual lightness, chroma).
+  const bri = s.brightness / 100 * 0.3, con = 1 + s.contrast / 100, sat = Math.max(0, 1 + s.saturation / 100);
+  if (bri || con !== 1 || sat !== 1) for (let i = 0; i < N; i++) {
+    let L = (lab[i * 3] - 0.6) * con + 0.6 + bri; lab[i * 3] = L < 0 ? 0 : L > 1 ? 1 : L;
+    lab[i * 3 + 1] *= sat; lab[i * 3 + 2] *= sat;
+  }
+  // Unsharp mask on lightness after downsampling, to restore edges that averaging softened.
+  if (s.sharpen > 0) {
+    const k = s.sharpen / 100 * 1.4, Lc = new Float32Array(N);
+    for (let i = 0; i < N; i++) Lc[i] = lab[i * 3];
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      let sum = 0, n = 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const X = x + dx, Y = y + dy; if (X < 0 || Y < 0 || X >= W || Y >= H) continue; sum += Lc[Y * W + X]; n++; }
+      const i = y * W + x, v = Lc[i] + k * (Lc[i] - sum / n);
+      lab[i * 3] = v < 0 ? 0 : v > 1 ? 1 : v;
+    }
+  }
+  if (s.skipFabric) {
+    const F = new Float32Array(3); oklab(LUT[s.fabricRGB[0]], LUT[s.fabricRGB[1]], LUT[s.fabricRGB[2]], F, 0); F[1] *= cw; F[2] *= cw;
+    const tol = Math.pow(s.fabricTol / 100 * 0.3, 2);
+    for (let i = 0; i < N; i++) if (d2(lab, i * 3, F, 0) <= tol) empty[i] = 1;
+  }
+
+  const idx = []; for (let i = 0; i < N; i++) if (!empty[i]) idx.push(i);
+  const grid = new Int16Array(N).fill(-1);
+  const result = { type: "result", id, W, H, pal: [], counts: [], accent: [], kept: [], keptUnused: [], merges: [], isoBefore: 0, isoAfter: 0, ms: 0 };
+  if (!idx.length) { result.grid = grid.buffer; postMessage(result, [grid.buffer]); return; }
+
+  // Sample points for palette fitting.
+  const stride = Math.max(1, Math.ceil(idx.length / 40000));
+  const m = Math.ceil(idx.length / stride), Pts = new Float32Array(m * 3);
+  for (let q = 0, k = 0; q < idx.length; q += stride, k++) { const i = idx[q]; Pts[k * 3] = lab[i * 3]; Pts[k * 3 + 1] = lab[i * 3 + 1]; Pts[k * 3 + 2] = lab[i * 3 + 2]; }
+  const rnd = rng(1234567);
+  const pinned = dedupe((s.pinned || []).filter(d => d >= 0 && d < NDMC));
+  const free = Math.max(0, s.maxColors - pinned.length);
+  const FX = pinned.length ? palLab(pinned) : null;
+  let pal = pinned.slice();
+  if (free > 0) {
+    const km = kmeans(Pts, m, free, rnd, FX);
+    for (let c = km.nf; c < km.K; c++) pal.push(nearestDMC(km.C, c * 3));
+  }
+  pal = dedupe(pal);
+  // Refit with the palette constrained to real DMC threads.
+  for (let it = 0; it < 5; it++) {
+    const P = palLab(pal), S = new Float64Array(pal.length * 3), Nn = new Uint32Array(pal.length);
+    for (let k = 0; k < m; k++) { const c = nearestIn(Pts, k * 3, P, pal.length); Nn[c]++; S[c * 3] += Pts[k * 3]; S[c * 3 + 1] += Pts[k * 3 + 1]; S[c * 3 + 2] += Pts[k * 3 + 2]; }
+    const mean = new Float32Array(3), next = pinned.slice();
+    for (let c = pinned.length; c < pal.length; c++) if (Nn[c]) { mean[0] = S[c * 3] / Nn[c]; mean[1] = S[c * 3 + 1] / Nn[c]; mean[2] = S[c * 3 + 2] / Nn[c]; next.push(nearestDMC(mean, 0)); }
+    const nd = dedupe(next);
+    if (nd.length === pal.length && nd.every(d => pal.indexOf(d) >= 0)) break;
+    pal = nd;
+  }
+
+  // Detail accents: add threads for small areas that no palette color represents well.
+  const accent = new Set();
+  const keep = new Set(pinned);
+  if (s.accents > 0) {
+    const delta2 = 0.1 * 0.1;
+    const P = palLab(pal), err = new Float32Array(N);
+    for (const i of idx) { let bd = Infinity; for (let k = 0; k < pal.length; k++) { const d = d2(lab, i * 3, P, k * 3); if (d < bd) bd = d; } err[i] = bd; }
+    const C = new Float32Array(3);
+    for (let tries = 0; accent.size < s.accents && tries < 60; tries++) {
+      let bi = -1, be = delta2;
+      for (const i of idx) if (err[i] > be) { be = err[i]; bi = i; }
+      if (bi < 0) break;
+      const cand = nearestDMC(lab, bi * 3);
+      C[0] = DMC[cand * 3]; C[1] = DMC[cand * 3 + 1]; C[2] = DMC[cand * 3 + 2];
+      const support = [];
+      for (const i of idx) if (err[i] >= delta2 && d2(lab, i * 3, C, 0) < 0.3 * err[i]) support.push(i);
+      if (pal.indexOf(cand) >= 0 || support.length < 3) { err[bi] = 0; for (const i of support) err[i] = 0; continue; }
+      pal.push(cand); accent.add(cand);
+      for (const i of idx) { const d = d2(lab, i * 3, C, 0); if (d < err[i]) err[i] = d; }
+    }
+  }
+
+  // Assign every stitch, optionally with error diffusion.
+  let P = palLab(pal);
+  if (s.dither > 0) {
+    const e = new Float32Array(lab), amt = s.dither / 100, lim = 0.12;
+    const push = (j, ex, ey, ez, w) => { if (empty[j]) return; e[j * 3] += ex * w; e[j * 3 + 1] += ey * w; e[j * 3 + 2] += ez * w; };
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const i = y * W + x; if (empty[i]) continue;
+      const c = nearestIn(e, i * 3, P, pal.length); grid[i] = c;
+      let ex = (e[i * 3] - P[c * 3]) * amt, ey = (e[i * 3 + 1] - P[c * 3 + 1]) * amt, ez = (e[i * 3 + 2] - P[c * 3 + 2]) * amt;
+      ex = Math.max(-lim, Math.min(lim, ex)); ey = Math.max(-lim, Math.min(lim, ey)); ez = Math.max(-lim, Math.min(lim, ez));
+      if (x + 1 < W) push(i + 1, ex, ey, ez, 7 / 16);
+      if (y + 1 < H) { if (x > 0) push(i + W - 1, ex, ey, ez, 3 / 16); push(i + W, ex, ey, ez, 5 / 16); if (x + 1 < W) push(i + W + 1, ex, ey, ez, 1 / 16); }
+    }
+  } else {
+    for (const i of idx) grid[i] = nearestIn(lab, i * 3, P, pal.length);
+  }
+  result.isoBefore = isolated(grid, W, H);
+
+  const ov = new Map(s.overrides || []);
+  const merges = [];
+  const protect = new Set([...accent, ...keep]);
+  mergeRare(grid, pal, protect, s.minStitches, merges);
+  pal = applyOverrides(grid, pal, ov);
+  let g2 = cleanSpecks(grid, W, H, s.specks, pal, protect);
+  mergeRare(g2, pal, protect, s.minStitches, merges);
+  pal = applyOverrides(g2, pal, ov);
+
+  // Compact and order by usage.
+  const cnt = counts(g2, pal.length);
+  const order = []; for (let k = 0; k < pal.length; k++) if (cnt[k]) order.push(k);
+  order.sort((a, b) => cnt[b] - cnt[a]);
+  const remap = new Int16Array(pal.length).fill(-1); order.forEach((k, j) => remap[k] = j);
+  for (let i = 0; i < N; i++) if (g2[i] >= 0) g2[i] = remap[g2[i]];
+  result.pal = order.map(k => pal[k]);
+  result.counts = order.map(k => cnt[k]);
+  result.accent = result.pal.map(d => accent.has(d) && !keep.has(d));
+  result.kept = result.pal.map(d => keep.has(d));
+  result.keptUnused = pinned.filter(d => result.pal.indexOf(d) < 0);
+  result.merges = merges;
+  result.isoAfter = isolated(g2, W, H);
+  result.ms = Date.now() - t0;
+  result.grid = g2.buffer;
+  postMessage(result, [g2.buffer]);
+}
+
+onmessage = (e) => {
+  const msg = e.data;
+  try {
+    if (msg.type === "init") {
+      NDMC = msg.dmc.length; DMC0 = new Float32Array(NDMC * 3);
+      msg.dmc.forEach((c, k) => oklab(LUT[c[0]], LUT[c[1]], LUT[c[2]], DMC0, k * 3));
+      CW = 0; setChroma(1.6);
+    } else if (msg.type === "source") {
+      const px = new Uint8ClampedArray(msg.pixels), n = msg.w * msg.h, lin = new Float32Array(n * 4);
+      for (let i = 0; i < n; i++) { lin[i * 4] = LUT[px[i * 4]]; lin[i * 4 + 1] = LUT[px[i * 4 + 1]]; lin[i * 4 + 2] = LUT[px[i * 4 + 2]]; lin[i * 4 + 3] = px[i * 4 + 3] / 255; }
+      SRC = { w: msg.w, h: msg.h, lin }; DS = { key: "" };
+    } else if (msg.type === "process") {
+      if (!SRC) return;
+      process(msg.id, msg.s);
+    }
+  } catch (err) {
+    postMessage({ type: "error", id: msg.id, message: String((err && err.message) || err) });
+  }
+};
+</script>
+
+<script>
+"use strict";
+const DMC_RAW = `3713|Salmon Very Light|255|226|226
+761|Salmon Light|255|201|201
+760|Salmon|245|173|173
+3712|Salmon Medium|241|135|135
+3328|Salmon Dark|227|109|109
+347|Salmon Very Dark|191|45|45
+353|Peach|254|215|204
+352|Coral Light|253|156|151
+351|Coral|233|106|103
+350|Coral Medium|224|72|72
+349|Coral Dark|210|16|53
+817|Coral Red Very Dark|187|5|31
+3708|Melon Light|255|203|213
+3706|Melon Medium|255|173|188
+3705|Melon Dark|255|121|146
+3801|Melon Very Dark|231|73|103
+666|Bright Red|227|29|66
+321|Red|199|43|59
+304|Red Medium|183|31|51
+498|Red Dark|167|19|43
+816|Garnet|151|11|35
+815|Garnet Medium|135|7|31
+814|Garnet Dark|123|0|27
+894|Carnation Very Light|255|178|187
+893|Carnation Light|252|144|162
+892|Carnation Medium|255|121|140
+891|Carnation Dark|255|87|115
+818|Baby Pink|255|223|217
+957|Geranium Pale|253|181|181
+956|Geranium|255|145|145
+309|Rose Dark|86|74|74
+963|Dusty Rose Ult Vy Lt|255|215|215
+3716|Dusty Rose Med Vy Lt|255|189|189
+962|Dusty Rose Medium|230|138|138
+961|Dusty Rose Dark|207|115|115
+3833|Raspberry Light|234|134|153
+3832|Raspberry Medium|219|85|110
+3831|Raspberry Dark|179|47|72
+777|Raspberry Very Dark|145|53|70
+819|Baby Pink Light|255|238|235
+3326|Rose Light|251|173|180
+776|Pink Medium|252|176|185
+899|Rose Medium|242|118|136
+335|Rose|238|84|110
+326|Rose Very Dark|179|59|75
+151|Dusty Rose Vry Lt|240|206|212
+3354|Dusty Rose Light|228|166|172
+3733|Dusty Rose|232|135|155
+3731|Dusty Rose Very Dark|218|103|131
+3350|Dusty Rose Ultra Dark|188|67|101
+150|Dusty Rose Ult Vy Dk|171|2|73
+3689|Mauve Light|251|191|194
+3688|Mauve Medium|231|169|172
+3687|Mauve|201|107|112
+3803|Mauve Dark|171|51|87
+3685|Mauve Very Dark|136|21|49
+605|Cranberry Very Light|255|192|205
+604|Cranberry Light|255|176|190
+603|Cranberry|255|164|190
+602|Cranberry Medium|226|72|116
+601|Cranberry Dark|209|40|106
+600|Cranberry Very Dark|205|47|99
+3806|Cyclamen Pink Light|255|140|174
+3805|Cyclamen Pink|243|71|139
+3804|Cyclamen Pink Dark|224|40|118
+3609|Plum Ultra Light|244|174|213
+3608|Plum Very Light|234|156|196
+3607|Plum Light|197|73|137
+718|Plum|156|36|98
+917|Plum Medium|155|19|89
+915|Plum Dark|130|0|67
+225|Shell Pink Ult Vy Lt|255|223|213
+224|Shell Pink Very Light|235|183|175
+152|Shell Pink Med Light|226|160|153
+223|Shell Pink Light|204|132|124
+3722|Shell Pink Med|188|108|100
+3721|Shell Pink Dark|161|75|81
+221|Shell Pink Vy Dk|136|62|67
+778|Antique Mauve Vy Lt|223|179|187
+3727|Antique Mauve Light|219|169|178
+316|Antique Mauve Med|183|115|127
+3726|Antique Mauve Dark|155|91|102
+315|Antique Mauve Md Dk|129|73|82
+3802|Antique Mauve Vy Dk|113|65|73
+902|Garnet Very Dark|130|38|55
+3743|Antique Violet Vy Lt|215|203|211
+3042|Antique Violet Light|183|157|167
+3041|Antique Violet Medium|149|111|124
+3740|Antique Violet Dark|120|87|98
+3836|Grape Light|186|145|170
+3835|Grape Medium|148|96|131
+3834|Grape Dark|114|55|93
+154|Grape Very Dark|87|36|51
+211|Lavender Light|227|203|227
+210|Lavender Medium|195|159|195
+209|Lavender Dark|163|123|167
+208|Lavender Very Dark|131|91|139
+3837|Lavender Ultra Dark|108|58|110
+327|Violet Dark|99|54|102
+153|Violet Very Light|230|204|217
+554|Violet Light|219|179|203
+553|Violet|163|99|139
+552|Violet  Medium|128|58|107
+550|Violet Very Dark|92|24|78
+3747|Blue Violet Vy Lt|211|215|237
+341|Blue Violet Light|183|191|221
+156|Blue Violet Med Lt|163|174|209
+340|Blue Violet Medium|173|167|199
+155|Blue Violet Med Dark|152|145|182
+3746|Blue Violet Dark|119|107|152
+333|Blue Violet Very Dark|92|84|120
+157|Cornflower Blue Vy Lt|187|195|217
+794|Cornflower Blue Light|143|156|193
+793|Cornflower Blue Med|112|125|162
+3807|Cornflower Blue|96|103|140
+792|Cornflower Blue Dark|85|91|123
+158|Cornflower Blu M V D|76|82|110
+791|Cornflower Blue V D|70|69|99
+3840|Lavender Blue Light|176|192|218
+3839|Lavender Blue Med|123|142|171
+3838|Lavender Blue Dark|92|114|148
+800|Delft Blue Pale|192|204|222
+809|Delft Blue|148|168|198
+799|Delft Blue Medium|116|142|182
+798|Delft Blue Dark|70|106|142
+797|Royal Blue|19|71|125
+796|Royal Blue Dark|17|65|109
+820|Royal Blue Very Dark|14|54|92
+162|Blue Ultra Very Light|219|236|245
+827|Blue Very Light|189|221|237
+813|Blue Light|161|194|215
+826|Blue Medium|107|158|191
+825|Blue Dark|71|129|165
+824|Blue Very Dark|57|105|135
+996|Electric Blue Medium|48|194|236
+3843|Electric Blue|20|170|208
+995|Electric Blue Dark|38|150|182
+3846|Turquoise Bright Light|6|227|230
+3845|Turquoise Bright Med|4|196|202
+3844|Turquoise Bright Dark|18|174|186
+159|Blue Gray Light|199|202|215
+160|Blue Gray Medium|153|159|183
+161|Blue Gray|120|128|164
+3756|Baby Blue Ult Vy Lt|238|252|252
+775|Baby Blue Very Light|217|235|241
+3841|Baby Blue Pale|205|223|237
+3325|Baby Blue Light|184|210|230
+3755|Baby Blue|147|180|206
+334|Baby Blue Medium|115|159|193
+322|Baby Blue Dark|90|143|184
+312|Baby Blue Very Dark|53|102|139
+803|Baby Blue Ult Vy Dk|44|89|124
+336|Navy Blue|37|59|115
+823|Navy Blue Dark|33|48|99
+939|Navy Blue Very Dark|27|40|83
+3753|Antique Blue Ult Vy Lt|219|226|233
+3752|Antique Blue Very Lt|199|209|219
+932|Antique Blue Light|162|181|198
+931|Antique Blue Medium|106|133|158
+930|Antique Blue Dark|69|92|113
+3750|Antique Blue Very Dk|56|76|94
+828|Sky Blue Vy Lt|197|232|237
+3761|Sky Blue Light|172|216|226
+519|Sky Blue|126|177|200
+518|Wedgewood Light|79|147|167
+3760|Wedgewood Med|62|133|162
+517|Wedgewood Dark|59|118|143
+3842|Wedgewood Vry Dk|50|102|124
+311|Wedgewood Ult VyDk|28|80|102
+747|Peacock Blue Vy Lt|229|252|253
+3766|Peacock Blue Light|153|207|217
+807|Peacock Blue|100|171|186
+806|Peacock Blue Dark|61|149|165
+3765|Peacock Blue Vy Dk|52|127|140
+3811|Turquoise Very Light|188|227|230
+598|Turquoise Light|144|195|204
+597|Turquoise|91|163|179
+3810|Turquoise Dark|72|142|154
+3809|Turquoise Vy Dark|63|124|133
+3808|Turquoise Ult Vy Dk|54|105|112
+928|Gray Green Vy Lt|221|227|227
+927|Gray Green Light|189|203|203
+926|Gray Green Med|152|174|174
+3768|Gray Green Dark|101|127|127
+924|Gray Green Vy Dark|86|106|106
+3849|Teal Green Light|82|179|164
+3848|Teal Green Med|85|147|146
+3847|Teal Green Dark|52|125|117
+964|Sea Green Light|169|226|216
+959|Sea Green Med|89|199|180
+958|Sea Green Dark|62|182|161
+3812|Sea Green Vy Dk|47|140|132
+3851|Green Bright Lt|73|179|161
+943|Green Bright Md|61|147|132
+3850|Green Bright Dk|55|132|119
+993|Aquamarine Vy Lt|144|192|180
+992|Aquamarine Lt|111|174|159
+3814|Aquamarine|80|139|125
+991|Aquamarine Dk|71|123|110
+966|Jade Ultra Vy Lt|185|215|192
+564|Jade Very Light|167|205|175
+563|Jade Light|143|192|152
+562|Jade Medium|83|151|106
+505|Jade Green|51|131|98
+3817|Celadon Green Lt|153|195|170
+3816|Celadon Green|101|165|125
+163|Celadon Green Md|77|131|97
+3815|Celadon Green Dk|71|119|89
+561|Celadon Green VD|44|106|69
+504|Blue Green Vy Lt|196|222|204
+3813|Blue Green Lt|178|212|189
+503|Blue Green Med|123|172|148
+502|Blue Green|91|144|113
+501|Blue Green Dark|57|111|82
+500|Blue Green Vy Dk|4|77|51
+955|Nile Green Light|162|214|173
+954|Nile Green|136|186|145
+913|Nile Green Med|109|171|119
+912|Emerald Green Lt|27|157|107
+911|Emerald Green Med|24|144|101
+910|Emerald Green Dark|24|126|86
+909|Emerald Green Vy Dk|21|111|73
+3818|Emerald Grn Ult V Dk|17|90|59
+369|Pistachio Green Vy Lt|215|237|204
+368|Pistachio Green Lt|166|194|152
+320|Pistachio Green Med|105|136|90
+367|Pistachio Green Dk|97|122|82
+319|Pistachio Grn Vy Dk|32|95|46
+890|Pistachio Grn Ult V D|23|73|35
+164|Forest Green Lt|200|216|184
+989|Forest Green|141|166|117
+988|Forest Green Med|115|139|91
+987|Forest Green Dk|88|113|65
+986|Forest Green Vy Dk|64|82|48
+772|Yellow Green Vy Lt|228|236|212
+3348|Yellow Green Lt|204|217|177
+3347|Yellow Green Med|113|147|92
+3346|Hunter Green|64|106|58
+3345|Hunter Green Dk|27|89|21
+895|Hunter Green Vy Dk|27|83|0
+704|Chartreuse Bright|158|207|52
+703|Chartreuse|123|181|71
+702|Kelly Green|71|167|47
+701|Green Light|63|143|41
+700|Green Bright|7|115|27
+699|Green|5|101|23
+907|Parrot Green Lt|199|230|102
+906|Parrot Green Md|127|179|53
+905|Parrot Green Dk|98|138|40
+904|Parrot Green V Dk|85|120|34
+472|Avocado Grn U Lt|216|228|152
+471|Avocado Grn V Lt|174|191|121
+470|Avocado Grn Lt|148|171|79
+469|Avocado Green|114|132|60
+937|Avocado Green Md|98|113|51
+936|Avocado Grn V Dk|76|88|38
+935|Avocado Green Dk|66|77|33
+934|Avocado Grn Black|49|57|25
+523|Fern Green Lt|171|177|151
+3053|Green Gray|156|164|130
+3052|Green Gray Md|136|146|104
+3051|Green Gray Dk|95|102|72
+524|Fern Green Vy Lt|196|205|172
+522|Fern Green|150|158|126
+520|Fern Green Dark|102|109|79
+3364|Pine Green|131|151|95
+3363|Pine Green Md|114|130|86
+3362|Pine Green Dk|94|107|71
+165|Moss Green Vy Lt|239|244|164
+3819|Moss Green Lt|224|232|104
+166|Moss Green Md Lt|192|200|64
+581|Moss Green|167|174|56
+580|Moss Green Dk|136|141|51
+734|Olive Green Lt|199|192|119
+733|Olive Green Md|188|179|76
+732|Olive Green|148|140|54
+731|Olive Green Dk|147|139|55
+730|Olive Green V Dk|130|123|48
+3013|Khaki Green Lt|185|185|130
+3012|Khaki Green Md|166|167|93
+3011|Khaki Green Dk|137|138|88
+372|Mustard Lt|204|183|132
+371|Mustard|191|166|113
+370|Mustard Medium|184|157|100
+834|Golden Olive Vy Lt|219|190|127
+833|Golden Olive Lt|200|171|108
+832|Golden Olive|189|155|81
+831|Golden Olive Md|170|143|86
+830|Golden Olive Dk|141|120|75
+829|Golden Olive Vy Dk|126|107|66
+613|Drab Brown V Lt|220|196|170
+612|Drab Brown Lt|188|154|120
+611|Drab Brown|150|118|86
+610|Drab Brown Dk|121|96|71
+3047|Yellow Beige Lt|231|214|193
+3046|Yellow Beige Md|216|188|154
+3045|Yellow Beige Dk|188|150|106
+167|Yellow Beige V Dk|167|124|73
+746|Off White|252|252|238
+677|Old Gold Vy Lt|245|236|203
+422|Hazelnut Brown Lt|198|159|123
+3828|Hazelnut Brown|183|139|97
+420|Hazelnut Brown Dk|160|112|66
+869|Hazelnut Brown V Dk|131|94|57
+728|Topaz|228|180|104
+783|Topaz Medium|206|145|36
+782|Topaz Dark|174|119|32
+781|Topaz Very Dark|162|109|32
+780|Topaz Ultra Vy Dk|148|99|26
+676|Old Gold Lt|229|206|151
+729|Old Gold Medium|208|165|62
+680|Old Gold Dark|188|141|14
+3829|Old Gold Vy Dark|169|130|4
+3822|Straw Light|246|220|152
+3821|Straw|243|206|117
+3820|Straw Dark|223|182|95
+3852|Straw Very Dark|205|157|55
+445|Lemon Light|255|251|139
+307|Lemon|253|237|84
+973|Canary Bright|255|227|0
+444|Lemon Dark|255|214|0
+3078|Golden Yellow Vy Lt|253|249|205
+727|Topaz Vy Lt|255|241|175
+726|Topaz Light|253|215|85
+725|Topaz Med Lt|255|200|64
+972|Canary Deep|255|181|21
+745|Yellow Pale Light|255|233|173
+744|Yellow Pale|255|231|147
+743|Yellow Med|254|211|118
+742|Tangerine Light|255|191|87
+741|Tangerine Med|255|163|43
+740|Tangerine|255|139|0
+970|Pumpkin Light|247|139|19
+971|Pumpkin|246|127|0
+947|Burnt Orange|255|123|77
+946|Burnt Orange Med|235|99|7
+900|Burnt Orange Dark|209|88|7
+967|Apricot Very Light|255|222|213
+3824|Apricot Light|254|205|194
+3341|Apricot|252|171|152
+3340|Apricot Med|255|131|111
+608|Burnt Orange Bright|253|93|53
+606|Orange-Red Bright|250|50|3
+951|Tawny Light|255|226|207
+3856|Mahogany Ult Vy Lt|255|211|181
+722|Orange Spice Light|247|151|111
+721|Orange Spice Med|242|120|66
+720|Orange Spice Dark|229|92|31
+3825|Pumpkin Pale|253|189|150
+922|Copper Light|226|115|35
+921|Copper|198|98|24
+920|Copper Med|172|84|20
+919|Red-Copper|166|69|16
+918|Red-Copper Dark|130|52|10
+3770|Tawny Vy Light|255|238|227
+945|Tawny|251|213|187
+402|Mahogany Vy Lt|247|167|119
+3776|Mahogany Light|207|121|57
+301|Mahogany Med|179|95|43
+400|Mahogany Dark|143|67|15
+300|Mahogany Vy Dk|111|47|0
+3823|Yellow Ultra Pale|255|253|227
+3855|Autumn Gold Lt|250|211|150
+3854|Autumn Gold Med|242|175|104
+3853|Autumn Gold Dk|242|151|70
+3827|Golden Brown Pale|247|187|119
+977|Golden Brown Light|220|156|86
+976|Golden Brown Med|194|129|66
+3826|Golden Brown|173|114|57
+975|Golden Brown Dk|145|79|18
+948|Peach Very Light|254|231|218
+754|Peach Light|247|203|191
+3771|Terra Cotta Ult Vy Lt|244|187|169
+758|Terra Cotta Vy Lt|238|170|155
+3778|Terra Cotta Light|217|137|120
+356|Terra Cotta Med|197|106|91
+3830|Terra Cotta|185|85|68
+355|Terra Cotta Dark|152|68|54
+3777|Terra Cotta Vy Dk|134|48|34
+3779|Rosewood Ult Vy Lt|248|202|200
+3859|Rosewood Light|186|139|124
+3858|Rosewood Med|150|74|63
+3857|Rosewood Dark|104|37|26
+3774|Desert Sand Vy Lt|243|225|215
+950|Desert Sand Light|238|211|196
+3064|Desert Sand|196|142|112
+407|Desert Sand Med|187|129|97
+3773|Desert Sand Dark|182|117|82
+3772|Desert Sand Vy Dk|160|108|80
+632|Desert Sand Ult Vy Dk|135|85|57
+453|Shell Gray Light|215|206|203
+452|Shell Gray Med|192|179|174
+451|Shell Gray Dark|145|123|115
+3861|Cocoa Light|166|136|129
+3860|Cocoa|125|93|87
+779|Cocoa Dark|98|75|69
+712|Cream|255|251|239
+739|Tan Ult Vy Lt|248|228|200
+738|Tan Very Light|236|204|158
+437|Tan Light|228|187|142
+436|Tan|203|144|81
+435|Brown Very Light|184|119|72
+434|Brown Light|152|94|51
+433|Brown Med|122|69|31
+801|Coffee Brown Dk|101|57|25
+898|Coffee Brown Vy Dk|73|42|19
+938|Coffee Brown Ult Dk|54|31|14
+3371|Black Brown|30|17|8
+543|Beige Brown Ult Vy Lt|242|227|206
+3864|Mocha Beige Light|203|182|156
+3863|Mocha Beige Med|164|131|92
+3862|Mocha Beige Dark|138|110|78
+3031|Mocha Brown Vy Dk|75|60|42
+B5200|Snow White|255|255|255
+White|White|252|251|248
+3865|Winter White|249|247|241
+Ecru|Ecru|240|234|218
+822|Beige Gray Light|231|226|211
+644|Beige Gray Med|221|216|203
+642|Beige Gray Dark|164|152|120
+640|Beige Gray Vy Dk|133|123|97
+3787|Brown Gray Dark|98|93|80
+3021|Brown Gray Vy Dk|79|75|65
+3024|Brown Gray Vy Lt|235|234|231
+3023|Brown Gray Light|177|170|151
+3022|Brown Gray Med|142|144|120
+535|Ash Gray Vy Lt|99|100|88
+3033|Mocha Brown Vy Lt|227|216|204
+3782|Mocha Brown Lt|210|188|166
+3032|Mocha Brown Med|179|159|139
+3790|Beige Gray Ult Dk|127|106|85
+3781|Mocha Brown Dk|107|87|67
+3866|Mocha Brn Ult Vy Lt|250|246|240
+842|Beige Brown Vy Lt|209|186|161
+841|Beige Brown Lt|182|155|126
+840|Beige Brown Med|154|124|92
+839|Beige Brown Dk|103|85|65
+838|Beige Brown Vy Dk|89|73|55
+3072|Beaver Gray Vy Lt|230|232|232
+648|Beaver Gray Lt|188|180|172
+647|Beaver Gray Med|176|166|156
+646|Beaver Gray Dk|135|125|115
+645|Beaver Gray Vy Dk|110|101|92
+844|Beaver Gray Ult Dk|72|72|72
+762|Pearl Gray Vy Lt|236|236|236
+415|Pearl Gray|211|211|214
+318|Steel Gray Lt|171|171|171
+414|Steel Gray Dk|140|140|140
+168|Pewter Very Light|209|209|209
+169|Pewter Light|132|132|132
+317|Pewter Gray|108|108|108
+413|Pewter Gray Dark|86|86|86
+3799|Pewter Gray Vy Dk|66|66|66
+310|Black|0|0|0`;
+const DMC = DMC_RAW.trim().split("\n").map(l => { const [code, name, r, g, b] = l.split("|"); return { code, name, r: +r, g: +g, b: +b, hex: "#" + [r, g, b].map(v => (+v).toString(16).padStart(2, "0")).join("") }; });
+const CODE_IDX = new Map(DMC.map((d, i) => [d.code, i]));
+// ---------- Chart symbols ----------
+// Vector symbols drawn the same way on screen, in the thread list and in exports. The order
+// alternates filled shapes, lines, outlines and split shapes so neighbors in the key look different.
+const SC = (cx, cy, r) => `M${cx + r} ${cy}A${r} ${r} 0 1 1 ${cx - r} ${cy}A${r} ${r} 0 1 1 ${cx + r} ${cy}Z`;
+const SSTAR = (() => { let d = ""; for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 17 : 41; d += (i ? "L" : "M") + (50 + r * Math.cos(a)).toFixed(1) + " " + (54 + r * Math.sin(a)).toFixed(1); } return d + "Z"; })();
+const SBOX = "M22 22H78V78H22Z";
+const SYM_SHAPES = [
+  [["f", SC(50, 50, 34)]],                                  // filled circle
+  [["S", "M22 22L78 78M78 22L22 78"]],                      // X
+  [["f", "M18 18H82V82H18Z"]],                              // filled square
+  [["S", "M50 14V86M14 50H86"]],                            // plus
+  [["f", "M50 12L89 83H11Z"]],                              // filled triangle
+  [["s", SC(50, 50, 31)]],                                  // ring
+  [["S", "M20 84L80 16"]],                                  // slash
+  [["f", "M50 9L91 50L50 91L9 50Z"]],                       // filled diamond
+  [["f", "M37 11H63V89H37Z"]],                              // vertical bar
+  [["s", SBOX]],                                            // open square
+  [["f", SSTAR]],                                           // star
+  [["f", "M11 37H89V63H11Z"]],                              // horizontal bar
+  [["s", "M50 19L83 79H17Z"]],                              // open triangle
+  [["f", "M50 86C20 64 9 47 17 30C25 15 44 17 50 32C56 17 75 15 83 30C91 47 80 64 50 86Z"]], // heart
+  [["S", "M20 16L80 84"]],                                  // backslash
+  [["f", SC(50, 50, 16)]],                                  // dot
+  [["s", SC(50, 50, 31)], ["f", SC(50, 50, 12)]],           // ring with dot
+  [["s", SBOX], ["f", "M22 22H50V78H22Z"]],                 // square, left half filled
+  [["S", "M14 70L50 30L86 70"]],                            // chevron up
+  [["f", "M11 18H89L50 89Z"]],                              // triangle down
+  [["s", "M50 14L86 50L50 86L14 50Z"]],                     // open diamond
+  [["s", SBOX], ["s", "M33 33L67 67M67 33L33 67"]],         // boxed X
+  [["f", "M11 23H89V43H11ZM11 57H89V77H11Z"]],              // equals
+  [["f", "M18 11L89 50L18 89Z"]],                           // triangle right
+  [["s", SC(50, 50, 31)], ["s", "M50 19V81M19 50H81"]],     // circled plus
+  [["f", "M15 11H85L50 50L85 89H15L50 50Z"]],               // hourglass
+  [["f", SC(50, 27, 13) + SC(26, 70, 13) + SC(74, 70, 13)]], // three dots
+  [["s", SBOX], ["f", "M22 22H78V50H22Z"]],                 // square, top half filled
+  [["S", "M30 14V72H88"]],                                  // L
+  [["f", "M82 11L11 50L82 89Z"]],                           // triangle left
+  [["S", "M14 30L50 70L86 30"]],                            // chevron down
+  [["S", "M12 24H88M50 24V90"]],                            // T
+  [["s", SBOX], ["f", SC(50, 50, 12)]],                     // square with dot
+  [["f", "M11 15V85L50 50L89 85V15L50 50Z"]],               // bow tie
+  [["s", SC(50, 50, 31)], ["f", "M50 19A31 31 0 0 0 50 81Z"]], // circle, half filled
+  [["f", "M50 9L87 48H63V91H37V48H13Z"]],                   // arrow up
+  [["f", "M32 32H68V68H32Z"]],                              // small square
+  [["s", SBOX], ["f", "M22 22V78H78Z"]],                    // square, diagonal half
+  [["s", SSTAR]],                                           // open star
+  [["S", "M14 34H86M14 66H86"]],                            // two lines
+  [["S", "M34 14V86M66 14V86"]],                            // two upright lines
+  [["f", SC(31, 50, 15) + SC(69, 50, 15)]],                 // two dots
+];
+const SYM_LETTERS = "ABCDEFGHKMNPRSUVYZ2345678".split("");
+const SYM_PATHS = SYM_SHAPES.map(parts => parts.map(([m, d]) => [m, new Path2D(d)]));
+const SYM_TEXT_FONT = '700 1px "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif';
+function symText(k) { const j = k - SYM_SHAPES.length; return j < SYM_LETTERS.length ? SYM_LETTERS[j] : String(k + 1); }
+function drawSymbol(ctx, k, x, y, size, color) {
+  const sp = SYM_PATHS[k];
+  ctx.save();
+  ctx.fillStyle = ctx.strokeStyle = color;
+  if (sp) {
+    const sc = size / 100;
+    ctx.translate(x, y); ctx.scale(sc, sc); ctx.lineCap = "round"; ctx.lineJoin = "round";
+    for (const [m, p] of sp) {
+      if (m === "f") ctx.fill(p);
+      else { ctx.lineWidth = Math.max(m === "S" ? 14 : 9, 1.2 / sc); ctx.stroke(p); }
+    }
+  } else {
+    const t = symText(k);
+    ctx.font = SYM_TEXT_FONT.replace("1px", Math.round(size * (t.length > 1 ? 0.56 : 0.8)) + "px");
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(t, x + size / 2, y + size * 0.55);
+  }
+  ctx.restore();
+}
+// Pre-rendered symbol tiles at device resolution, cached per pattern.
+function symSprite(k, ink, px) {
+  const cache = R._sym || (R._sym = new Map()), key = k + "|" + ink + "|" + px;
+  let c = cache.get(key);
+  if (!c) {
+    c = document.createElement("canvas"); c.width = c.height = px;
+    const inset = px * 0.11;
+    drawSymbol(c.getContext("2d"), k, inset, inset, px - 2 * inset, ink);
+    cache.set(key, c);
+  }
+  return c;
+}
+function symSVG(k, color, size = 20) {
+  const parts = SYM_SHAPES[k];
+  const body = parts
+    ? parts.map(([m, d]) => m === "f" ? `<path d="${d}" fill="${color}"/>` : `<path d="${d}" fill="none" stroke="${color}" stroke-width="${m === "S" ? 14 : 9}" stroke-linecap="round" stroke-linejoin="round"/>`).join("")
+    : `<text x="50" y="55" text-anchor="middle" dominant-baseline="middle" font-size="${symText(k).length > 1 ? 56 : 80}" font-weight="700" font-family="IBM Plex Sans, ui-sans-serif, system-ui, sans-serif" fill="${color}">${symText(k)}</text>`;
+  return `<svg viewBox="0 0 100 100" width="${size}" height="${size}" aria-hidden="true">${body}</svg>`;
+}
+function symName(k) { return "key " + (k + 1); }
+
+const SYM_FONT = 'ui-sans-serif, system-ui, "Apple Symbols", "Segoe UI Symbol", "Noto Sans Symbols 2", sans-serif';
+const $ = id => document.getElementById(id);
+// ---------- Themes ----------
+const THEMES = [
+  { id: "cobalt", name: "Cobalt", group: "bold", h: 228, accent: ["#2c47b0", "#8fa3ff"] },
+  { id: "crimson", name: "Crimson", group: "bold", h: 350, accent: ["#b5203d", "#ff8fa3"] },
+  { id: "marigold", name: "Marigold", group: "bold", h: 42, accent: ["#e5a206", "#f6c453"], ink: ["#2b1d00", "#2b1d00"], text: ["#8a5a00", "#f6c453"] },
+  { id: "emerald", name: "Emerald", group: "bold", h: 160, accent: ["#0c7a59", "#5fd6a9"] },
+  { id: "violet", name: "Violet", group: "bold", h: 265, accent: ["#6a3fd0", "#bba3ff"] },
+  { id: "tangerine", name: "Tangerine", group: "bold", h: 22, accent: ["#d4560f", "#ffa36b"] },
+  { id: "blush", name: "Blush", group: "pastel", h: 345 },
+  { id: "peach", name: "Peach", group: "pastel", h: 22 },
+  { id: "butter", name: "Butter", group: "pastel", h: 50, s: 72 },
+  { id: "mint", name: "Mint", group: "pastel", h: 155 },
+  { id: "sky", name: "Sky", group: "pastel", h: 205 },
+  { id: "lavender", name: "Lavender", group: "pastel", h: 262 },
+];
+const hsl = (h, s, l) => `hsl(${h} ${s}% ${l}%)`;
+function themeTokens(t, dark) {
+  const h = t.h, base = dark ? { warn: "#e3a35d", danger: "#ff8a80" } : { warn: "#a2560d", danger: "#b3261e" };
+  if (t.group === "bold") {
+    return Object.assign(base, dark ? {
+      bg: hsl(h, 22, 8), panel: hsl(h, 20, 12), ink: hsl(h, 20, 92), muted: hsl(h, 10, 65), line: hsl(h, 16, 22),
+      accent: t.accent[1], "accent-ink": t.ink ? t.ink[1] : hsl(h, 55, 10), "accent-soft": hsl(h, 35, 19),
+      "accent-text": t.text ? t.text[1] : t.accent[1], stage: hsl(h, 25, 5),
+    } : {
+      bg: hsl(h, 26, 94), panel: hsl(h, 40, 99.5), ink: hsl(h, 32, 12), muted: hsl(h, 12, 40), line: hsl(h, 20, 84),
+      accent: t.accent[0], "accent-ink": t.ink ? t.ink[0] : "#ffffff", "accent-soft": hsl(h, 75, 93),
+      "accent-text": t.text ? t.text[0] : t.accent[0], stage: hsl(h, 18, 86),
+    });
+  }
+  const s = t.s || 62;
+  return Object.assign(base, dark ? {
+    bg: hsl(h, 16, 11), panel: hsl(h, 16, 15), ink: hsl(h, 35, 93), muted: hsl(h, 14, 68), line: hsl(h, 14, 25),
+    accent: hsl(h, s + 8, 80), "accent-ink": hsl(h, 45, 15), "accent-soft": hsl(h, 24, 24), "accent-text": hsl(h, 75, 83), stage: hsl(h, 20, 7),
+  } : {
+    bg: hsl(h, Math.round(s * 0.9), 95.5), panel: hsl(h, 80, 99), ink: hsl(h, 32, 18), muted: hsl(h, 16, 42), line: hsl(h, 40, 86),
+    accent: hsl(h, s + 8, 79), "accent-ink": hsl(h, 50, 17), "accent-soft": hsl(h, 75, 91), "accent-text": hsl(h, 48, 36), stage: hsl(h, 45, 89),
+  });
+}
+const THEME = { theme: "cobalt", mode: "auto" };
+try { Object.assign(THEME, JSON.parse(localStorage.getItem("csp.theme") || "{}")); } catch (e) { }
+function resolvedDark() {
+  if (THEME.mode === "dark") return true;
+  if (THEME.mode === "light") return false;
+  const host = document.documentElement.getAttribute("data-theme");
+  if (host === "dark") return true;
+  if (host === "light") return false;
+  return matchMedia("(prefers-color-scheme: dark)").matches;
+}
+function applyTheme() {
+  const t = THEMES.find(x => x.id === THEME.theme) || THEMES[0], dark = resolvedDark(), tok = themeTokens(t, dark);
+  const st = document.documentElement.style;
+  for (const k in tok) st.setProperty("--" + k, tok[k]);
+  st.colorScheme = dark ? "dark" : "light";
+  if (!$("settings").hidden) renderThemeCards();
+}
+function themeCard(t, dark) {
+  const k = themeTokens(t, dark), on = t.id === THEME.theme;
+  return `<button type="button" class="theme-card${on ? " on" : ""}" data-theme-id="${t.id}" aria-pressed="${on}">
+    <span class="tc-prev" style="background:${k.bg}">
+      <span class="tc-panel" style="background:${k.panel};border-color:${k.line}">
+        <i style="background:${k.accent}"></i><b style="background:${k.line}"></b><b style="background:${k.line};width:55%"></b>
+        <em style="background:${k["accent-soft"]}"><span style="background:${k.accent}"></span></em>
+      </span>
+    </span>
+    <span class="tc-name">${t.name}</span></button>`;
+}
+function renderThemeCards() {
+  const dark = resolvedDark();
+  $("themes-bold").innerHTML = THEMES.filter(t => t.group === "bold").map(t => themeCard(t, dark)).join("");
+  $("themes-pastel").innerHTML = THEMES.filter(t => t.group === "pastel").map(t => themeCard(t, dark)).join("");
+  document.querySelectorAll("#mode-seg button").forEach(b => b.setAttribute("aria-pressed", b.dataset.mode === THEME.mode));
+}
+function saveTheme() { try { localStorage.setItem("csp.theme", JSON.stringify(THEME)); } catch (e) { } }
+function openSettings() { $("settings").hidden = false; document.body.style.overflow = "hidden"; renderThemeCards(); }
+function closeSettings() { $("settings").hidden = true; document.body.style.overflow = ""; }
+$("btn-settings").addEventListener("click", openSettings);
+$("set-close").addEventListener("click", closeSettings);
+$("settings").addEventListener("click", e => {
+  if (e.target.id === "settings") { closeSettings(); return; }
+  const c = e.target.closest("[data-theme-id]"); if (c) { THEME.theme = c.dataset.themeId; saveTheme(); applyTheme(); return; }
+  const m = e.target.closest("[data-mode]"); if (m) { THEME.mode = m.dataset.mode; saveTheme(); applyTheme(); }
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("settings").hidden) closeSettings(); });
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyTheme);
+new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+applyTheme();
+
+function fillRange(el) { const min = +el.min || 0, max = +el.max || 100; el.style.setProperty("--p", ((+el.value - min) / (max - min || 1) * 100) + "%"); }
+document.addEventListener("input", e => { if (e.target.type === "range") fillRange(e.target); }, true);
+
+
+function toLin(c) { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }
+function oklabOf(d) { const r = toLin(d.r), g = toLin(d.g), b = toLin(d.b);
+  const l = Math.cbrt(0.4122214708*r+0.5363325363*g+0.0514459929*b), m = Math.cbrt(0.2119034982*r+0.6806995451*g+0.1073969566*b), s = Math.cbrt(0.0883024619*r+0.2817188376*g+0.6299787005*b);
+  return [0.2104542553*l+0.7936177850*m-0.0040720468*s, 1.9779984951*l-2.4285922050*m+0.4505937099*s, 0.0259040371*l+0.7827717662*m-0.8086757660*s]; }
+DMC.forEach(d => d.lab = oklabOf(d));
+const labDist = (a, b) => Math.hypot(a.lab[0] - b.lab[0], a.lab[1] - b.lab[1], a.lab[2] - b.lab[2]);
+const lum = d => 0.2126 * toLin(d.r) + 0.7152 * toLin(d.g) + 0.0722 * toLin(d.b);
+const fmt = n => n.toLocaleString("en-US");
+
+const DEFAULTS = { width: 100, height: 75, lock: true, fabricCount: "14", maxColors: 24, hue: 40, accents: 3, ownedOnly: false, pinned: [], minStitches: 20, skipFabric: false, fabric: "#ffffff", fabricTol: 18, specks: 2, dither: 0, sharpen: 35, brightness: 0, contrast: 0, saturation: 0, view: "stitched", zoom: 7, overlay: 0, overrides: {} };
+let S = Object.assign({}, DEFAULTS, { overrides: {} });
+let IMG = null;           // {canvas, w, h, name}
+let R = null;             // latest result
+let highlight = -1;
+const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } } };
+
+// ---------- Worker ----------
+const worker = new Worker(URL.createObjectURL(new Blob([$("worker-src").textContent], { type: "text/javascript" })));
+worker.postMessage({ type: "init", dmc: DMC.map(d => [d.r, d.g, d.b]) });
+let reqId = 0, busy = false, pending = false, timer = 0, needFit = false;
+function schedule(delay = 140) { clearTimeout(timer); timer = setTimeout(run, delay); saveLater(); }
+function run() {
+  if (!IMG) return;
+  if (busy) { pending = true; return; }
+  busy = true; $("busy").classList.add("on");
+  const f = S.fabric.replace("#", "");
+  const overrides = Object.entries(S.overrides).filter(([a, b]) => CODE_IDX.has(a) && CODE_IDX.has(b)).map(([a, b]) => [CODE_IDX.get(a), CODE_IDX.get(b)]);
+  worker.postMessage({ type: "process", id: ++reqId, s: {
+    pinned: (S.pinned || []).filter(c => CODE_IDX.has(c)).map(c => CODE_IDX.get(c)),
+    allowed: S.ownedOnly && OWN.size ? [...OWN].map(c => CODE_IDX.get(c)).filter(i => i !== undefined) : null,
+    width: S.width, height: S.height, maxColors: S.maxColors, chroma: 1 + S.hue / 100 * 1.5, accents: S.accents, minStitches: S.minStitches,
+    skipFabric: S.skipFabric, fabricRGB: [0, 2, 4].map(i => parseInt(f.slice(i, i + 2), 16)), fabricTol: S.fabricTol,
+    specks: S.specks, dither: S.dither, sharpen: S.sharpen, brightness: S.brightness, contrast: S.contrast, saturation: S.saturation, overrides } });
+}
+worker.onmessage = e => {
+  const m = e.data;
+  busy = false;
+  if (m.type === "error") { toast("Couldn't build the pattern: " + m.message); }
+  else if (m.type === "result") {
+    m.grid = new Int16Array(m.grid); R = m; if (highlight >= R.pal.length) highlight = -1;
+    if (needFit) { needFit = false; fitZoom(); } else draw();
+    renderLegend(); renderStats();
+  }
+  if (pending) { pending = false; run(); } else $("busy").classList.remove("on");
+};
+
+// ---------- Image loading ----------
+const MAX_SRC = 1600;
+function setImage(canvas, name, keepSettings, id) {
+  IMG = { canvas, w: canvas.width, h: canvas.height, name, id: id || newId(), alpha: false };
+  store.set("csp.imageId", IMG.id);
+  const data = canvas.getContext("2d", { willReadFrequently: true }).getImageData(0, 0, canvas.width, canvas.height);
+  for (let i = 3; i < data.data.length; i += 16) if (data.data[i] < 250) { IMG.alpha = true; break; }
+  worker.postMessage({ type: "source", w: canvas.width, h: canvas.height, pixels: data.data.buffer }, [data.data.buffer]);
+  if (!keepSettings) { S.overrides = {}; S.pinned = []; highlight = -1; setPickMode(false); if (S.lock) S.height = clampDim(Math.round(S.width * IMG.h / IMG.w)); }
+  $("img-name").textContent = name;
+  $("img-meta").textContent = `${IMG.w} × ${IMG.h} px · tap to replace`;
+  const th = document.createElement("canvas"), sc = Math.min(144 / IMG.w, 144 / IMG.h);
+  th.width = Math.max(1, Math.round(IMG.w * sc)); th.height = Math.max(1, Math.round(IMG.h * sc));
+  th.getContext("2d").drawImage(canvas, 0, 0, th.width, th.height);
+  $("thumb").replaceChildren(th);
+  needFit = true;
+  syncUI(); schedule(0);
+  storeImageLater();
+}
+function canvasFromImage(im) {
+  const sc = Math.min(1, MAX_SRC / Math.max(im.naturalWidth || im.width, im.naturalHeight || im.height));
+  const c = document.createElement("canvas");
+  c.width = Math.max(1, Math.round((im.naturalWidth || im.width) * sc)); c.height = Math.max(1, Math.round((im.naturalHeight || im.height) * sc));
+  const ctx = c.getContext("2d"); ctx.imageSmoothingQuality = "high"; ctx.drawImage(im, 0, 0, c.width, c.height);
+  return c;
+}
+function loadURL(url, name, keep, id) {
+  return new Promise(res => {
+    const im = new Image();
+    im.onload = () => { setImage(canvasFromImage(im), name, keep, id); res(true); };
+    im.onerror = () => { toast("That file couldn't be opened as an image. JPG, PNG, HEIC and WebP all work."); res(false); };
+    im.src = url;
+  });
+}
+async function loadFile(file) {
+  if (!file) return;
+  if (/json$/i.test(file.name) || file.type === "application/json") {
+    try { const p = JSON.parse(await file.text()); if (p.kind === "backup") { await restoreBackup(p); return; } if (!p.image) throw new Error("no image"); Object.assign(S, DEFAULTS, p.settings || {}); S.overrides = (p.settings && p.settings.overrides) || {}; S.pinned = (p.settings && Array.isArray(p.settings.pinned)) ? p.settings.pinned : []; renderPins(); await loadURL(p.image, p.name || "Saved project", true); toast("Project opened"); }
+    catch (e) { toast("That project file couldn't be read."); }
+    return;
+  }
+  const url = URL.createObjectURL(file);
+  await loadURL(url, file.name || "Pasted image", false);
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
+function makeSample() {
+  const W = 640, H = 480, c = document.createElement("canvas"); c.width = W; c.height = H;
+  const x = c.getContext("2d");
+  let g = x.createLinearGradient(0, 0, 0, H * 0.62);
+  g.addColorStop(0, "#27306b"); g.addColorStop(0.45, "#a3487a"); g.addColorStop(0.8, "#f08a4b"); g.addColorStop(1, "#ffd27a");
+  x.fillStyle = g; x.fillRect(0, 0, W, H);
+  g = x.createRadialGradient(430, 270, 10, 430, 270, 150); g.addColorStop(0, "rgba(255,244,200,1)"); g.addColorStop(0.18, "rgba(255,226,140,.95)"); g.addColorStop(1, "rgba(255,200,120,0)");
+  x.fillStyle = g; x.fillRect(0, 0, W, H);
+  x.fillStyle = "#fff6d8"; x.beginPath(); x.arc(430, 272, 34, 0, Math.PI * 2); x.fill();
+  const hill = (base, amp, freq, phase, col) => { x.fillStyle = col; x.beginPath(); x.moveTo(0, H); for (let i = 0; i <= W; i += 4) x.lineTo(i, base - amp * Math.sin(i * freq + phase) - amp * 0.4 * Math.sin(i * freq * 2.7 + phase * 2)); x.lineTo(W, H); x.fill(); };
+  hill(330, 34, 0.009, 1.2, "#7a4a7a"); hill(360, 28, 0.012, 0.3, "#4f3866"); hill(400, 22, 0.015, 2.1, "#2d3a4f");
+  g = x.createLinearGradient(0, 400, 0, H); g.addColorStop(0, "#2c4a3a"); g.addColorStop(1, "#16281f"); hill(420, 16, 0.02, 0.8, g);
+  x.strokeStyle = "#1a1720"; x.lineWidth = 3; x.lineCap = "round";
+  [[120, 120], [150, 105], [175, 135]].forEach(([bx, by]) => { x.beginPath(); x.moveTo(bx - 10, by); x.quadraticCurveTo(bx - 4, by - 7, bx, by); x.quadraticCurveTo(bx + 4, by - 7, bx + 10, by); x.stroke(); });
+  x.fillStyle = "#1b1520"; x.fillRect(86, 300, 9, 130);
+  x.beginPath(); x.ellipse(90, 290, 46, 60, 0, 0, Math.PI * 2); x.fill();
+  const flower = (fx, fy, col) => { x.fillStyle = col; for (let a = 0; a < 5; a++) { x.beginPath(); x.ellipse(fx + Math.cos(a * 1.256) * 7, fy + Math.sin(a * 1.256) * 7, 6, 4, a * 1.256, 0, Math.PI * 2); x.fill(); } x.fillStyle = "#ffd84a"; x.beginPath(); x.arc(fx, fy, 4, 0, 7); x.fill(); };
+  [[260, 452, "#f2f0ff"], [300, 440, "#ff5d8f"], [345, 458, "#f2f0ff"], [520, 446, "#ff5d8f"], [560, 462, "#c79bff"], [210, 466, "#c79bff"]].forEach(f => flower(...f));
+  const id = x.getImageData(0, 0, W, H), d = id.data; let s = 99;
+  const r = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
+  for (let i = 0; i < d.length; i += 4) { const n = (r() - 0.5) * 22; d[i] += n; d[i + 1] += n; d[i + 2] += n; }
+  x.putImageData(id, 0, 0);
+  return c;
+}
+
+// ---------- Rendering ----------
+const FABRIC = "#f4f2ec";
+function shade(d, k) { const f = v => Math.round(k < 0 ? v * (1 + k) : v + (255 - v) * k); return `rgb(${f(d.r)},${f(d.g)},${f(d.b)})`; }
+function tint(d, k) { const f = v => Math.round(v * k + 255 * (1 - k)); return `rgb(${f(d.r)},${f(d.g)},${f(d.b)})`; }
+
+function stitchSprite(d, px) {
+  const c = document.createElement("canvas"); c.width = c.height = px;
+  const x = c.getContext("2d"), lw = px * 0.3, a = px * 0.17, b = px - a;
+  x.lineCap = "round";
+  const leg = (x0, y0, x1, y1) => {
+    x.strokeStyle = shade(d, -0.38); x.lineWidth = lw + Math.max(1, px * 0.06); x.beginPath(); x.moveTo(x0, y0); x.lineTo(x1, y1); x.stroke();
+    x.strokeStyle = d.hex; x.lineWidth = lw; x.beginPath(); x.moveTo(x0, y0); x.lineTo(x1, y1); x.stroke();
+    x.strokeStyle = shade(d, 0.28); x.lineWidth = Math.max(0.6, lw * 0.22); x.beginPath(); x.moveTo(x0 + lw * 0.12, y0 - lw * 0.12); x.lineTo(x1 + lw * 0.12, y1 - lw * 0.12); x.stroke();
+  };
+  leg(a, b, b, a); leg(a, a, b, b);
+  return c;
+}
+
+function stitchSprites(px) {
+  if (R._stitch && R._stitch.px === px) return R._stitch.arr;
+  const arr = R.pal.map(i => stitchSprite(DMC[i], px));
+  R._stitch = { px, arr };
+  return arr;
+}
+
+// Draw cells [x0,x1)×[y0,y1) with cell (x0,y0) at (ox, oy) and cell size cs in the context's units.
+// opts.scale is the device-pixel scale of the context, so cached tiles are rendered sharp.
+function drawRegion(ctx, ox, oy, cs, x0, y0, x1, y1, mode, opts = {}) {
+  const W = R.W, grid = R.grid, pal = R.pal.map(i => DMC[i]), scale = opts.scale || 1;
+  const w = (x1 - x0) * cs, h = (y1 - y0) * cs;
+  ctx.fillStyle = mode === "bw" ? "#ffffff" : FABRIC; ctx.fillRect(ox, oy, w, h);
+  if (mode === "stitched" && cs >= 6) {
+    const sprites = stitchSprites(Math.round(cs * scale));
+    ctx.fillStyle = "rgba(90,80,60,.16)";
+    const hole = Math.max(1 / scale, cs * 0.09);
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) ctx.fillRect(ox + (x - x0) * cs - hole / 2, oy + (y - y0) * cs - hole / 2, hole, hole);
+    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) { const c = grid[y * W + x]; if (c >= 0) ctx.drawImage(sprites[c], ox + (x - x0) * cs, oy + (y - y0) * cs, cs, cs); }
+  } else {
+    const fills = pal.map(d => mode === "symbols" ? (opts.print ? tint(d, 0.42) : d.hex) : mode === "bw" ? "#ffffff" : d.hex);
+    let last = null;
+    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+      const c = grid[y * W + x]; if (c < 0) continue;
+      if (fills[c] !== last) { last = fills[c]; ctx.fillStyle = last; }
+      ctx.fillRect(ox + (x - x0) * cs, oy + (y - y0) * cs, cs + 0.02, cs + 0.02);
+    }
+    if ((mode === "symbols" || mode === "bw") && cs >= 6) {
+      const ink = pal.map(d => mode === "bw" || opts.print ? "#111111" : (lum(d) > 0.3 ? "#111111" : "#ffffff"));
+      const px = Math.max(4, Math.round(cs * scale));
+      for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+        const c = grid[y * W + x]; if (c < 0) continue;
+        ctx.drawImage(symSprite(c, ink[c], px), ox + (x - x0) * cs, oy + (y - y0) * cs, cs, cs);
+      }
+    }
+  }
+  if (opts.highlight >= 0) {
+    ctx.fillStyle = "rgba(244,242,236,.82)";
+    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) { const c = grid[y * W + x]; if (c !== opts.highlight) ctx.fillRect(ox + (x - x0) * cs, oy + (y - y0) * cs, cs + 0.02, cs + 0.02); }
+  }
+  if (opts.grid && cs >= 4) {
+    const minor = cs >= 7, thin = 1 / scale;
+    for (let x = x0; x <= x1; x++) { const major = x % 10 === 0; if (!major && !minor) continue; ctx.fillStyle = major ? "rgba(20,20,30,.78)" : "rgba(20,20,30,.24)"; const lw = major ? Math.max(1.5, cs * 0.1) : thin; ctx.fillRect(ox + (x - x0) * cs - lw / 2, oy, lw, h); }
+    for (let y = y0; y <= y1; y++) { const major = y % 10 === 0; if (!major && !minor) continue; ctx.fillStyle = major ? "rgba(20,20,30,.78)" : "rgba(20,20,30,.24)"; const lw = major ? Math.max(1.5, cs * 0.1) : thin; ctx.fillRect(ox, oy + (y - y0) * cs - lw / 2, w, lw); }
+  }
+  if (opts.numbers) {
+    ctx.fillStyle = opts.numberColor || "#444"; ctx.font = `500 ${opts.numberSize}px ui-monospace, Menlo, monospace`;
+    ctx.textBaseline = "bottom"; ctx.textAlign = "center";
+    for (let x = Math.ceil(x0 / 10) * 10; x <= x1; x += 10) ctx.fillText(String(x), ox + (x - x0) * cs, oy - 4);
+    ctx.textBaseline = "middle"; ctx.textAlign = "right";
+    for (let y = Math.ceil(y0 / 10) * 10; y <= y1; y += 10) ctx.fillText(String(y), ox - 5, oy + (y - y0) * cs);
+  }
+}
+
+// ---------- Preview viewport ----------
+// The preview canvas is only as big as the visible stage and redraws the stitches in view, so any
+// pattern size can be shown at any zoom, and zoom, resize and scroll stay quick.
+const PAD = 18, SYM_MIN = 12, ZOOM_MAX = 48, RULER = 30;
+const isSymView = (v = S.view) => v === "symbols" || v === "bw";
+const zoomMin = () => isSymView() ? SYM_MIN : 2;
+let drawQueued = false;
+function requestDraw() { if (drawQueued) return; drawQueued = true; requestAnimationFrame(() => { drawQueued = false; draw(); }); }
+function layout() {
+  const st = $("stage"), vw = st.clientWidth, vh = st.clientHeight;
+  const cs = Math.max(zoomMin(), Math.min(ZOOM_MAX, S.zoom));
+  const ruler = isSymView() ? RULER : 0, gw = R.W * cs, gh = R.H * cs;
+  const needW = gw + 2 * PAD + ruler, needH = gh + 2 * PAD + ruler;
+  const left0 = needW <= vw ? Math.max(PAD + ruler, Math.round((vw - gw + ruler) / 2)) : PAD + ruler;
+  const top0 = needH <= vh ? Math.max(PAD + ruler, Math.round((vh - gh + ruler) / 2)) : PAD + ruler;
+  return { vw, vh, cs, ruler, gw, gh, cw: Math.max(needW, vw), ch: Math.max(needH, vh), left0, top0, scrolls: needW > vw || needH > vh };
+}
+function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+function draw() {
+  if (!R) return;
+  const st = $("stage"), cv = $("chart"), dpr = Math.min(2, window.devicePixelRatio || 1), L = layout();
+  const sz = $("sizer"); sz.style.width = L.cw + "px"; sz.style.height = L.ch + "px";
+  const bw = Math.max(1, Math.round(L.vw * dpr)), bh = Math.max(1, Math.round(L.vh * dpr));
+  if (cv.width !== bw || cv.height !== bh) { cv.width = bw; cv.height = bh; }
+  cv.style.width = L.vw + "px"; cv.style.height = L.vh + "px";
+  const ctx = cv.getContext("2d");
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, bw, bh); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const cs = L.cs, gx = L.left0 - st.scrollLeft, gy = L.top0 - st.scrollTop;
+  ctx.save(); ctx.shadowColor = "rgba(10,20,40,.3)"; ctx.shadowBlur = 22; ctx.shadowOffsetY = 6;
+  ctx.fillStyle = S.view === "bw" ? "#fff" : FABRIC; ctx.fillRect(gx, gy, L.gw, L.gh); ctx.restore();
+  const x0 = Math.max(0, Math.floor(-gx / cs)), x1 = Math.min(R.W, Math.ceil((L.vw - gx) / cs));
+  const y0 = Math.max(0, Math.floor(-gy / cs)), y1 = Math.min(R.H, Math.ceil((L.vh - gy) / cs));
+  if (x1 > x0 && y1 > y0) {
+    drawRegion(ctx, gx + x0 * cs, gy + y0 * cs, cs, x0, y0, x1, y1, S.view, { highlight, scale: dpr, grid: isSymView() || (S.view === "blocks" && cs >= 12) });
+  }
+  const ovl = pickMode ? 100 : S.overlay;
+  if (ovl > 0 && IMG) { ctx.globalAlpha = ovl / 100; ctx.imageSmoothingQuality = "high"; ctx.drawImage(IMG.canvas, gx, gy, L.gw, L.gh); ctx.globalAlpha = 1; }
+  if (L.ruler) drawRulers(ctx, L, gx, gy);
+  draw.L = L; draw.cs = cs;
+}
+// Column and row numbers that stay at the edge of the view while you scroll.
+function drawRulers(ctx, L, gx, gy) {
+  const r = L.ruler, cs = L.cs, panel = cssVar("--panel") || "#fff", muted = cssVar("--muted") || "#666", line = cssVar("--line") || "#ccc";
+  const ry = Math.max(0, gy - r), rx = Math.max(0, gx - r);
+  const step = cs >= 30 ? 5 : 10;
+  ctx.save();
+  ctx.globalAlpha = 0.95; ctx.fillStyle = panel;
+  ctx.fillRect(Math.max(gx, rx + r), ry, Math.min(L.gw, L.vw - gx), r);
+  ctx.fillRect(rx, Math.max(gy, ry + r), r, Math.min(L.gh, L.vh - gy));
+  ctx.fillRect(rx, ry, r, r);
+  ctx.globalAlpha = 1; ctx.fillStyle = line;
+  ctx.fillRect(Math.max(gx, rx + r), ry + r - 1, Math.min(L.gw, L.vw - gx), 1);
+  ctx.fillRect(rx + r - 1, Math.max(gy, ry + r), 1, Math.min(L.gh, L.vh - gy));
+  ctx.fillStyle = muted; ctx.font = '600 11px "IBM Plex Mono", ui-monospace, Menlo, monospace';
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.beginPath(); ctx.rect(rx + r, ry, L.vw, r); ctx.save(); ctx.clip();
+  for (let x = step; x <= R.W; x += step) { const X = gx + x * cs; if (X > rx + r - 10 && X < L.vw + 10) ctx.fillText(String(x), X - cs / 2, ry + r / 2); }
+  ctx.restore();
+  ctx.beginPath(); ctx.rect(rx, ry + r, r, L.vh); ctx.save(); ctx.clip();
+  for (let y = step; y <= R.H; y += step) { const Y = gy + y * cs; if (Y > ry + r - 10 && Y < L.vh + 10) ctx.fillText(String(y), rx + r / 2, Y - cs / 2); }
+  ctx.restore();
+  ctx.restore();
+}
+function syncZoomSlider() { const z = $("zoom"); z.min = zoomMin(); z.max = ZOOM_MAX; z.value = Math.round(S.zoom); fillRange(z); }
+function fitZoom(announce) {
+  if (!R) return;
+  const st = $("stage"), ruler = isSymView() ? RULER : 0;
+  const aw = st.clientWidth - 2 * PAD - ruler, ah = st.clientHeight - 2 * PAD - ruler;
+  let z = Math.min(aw / R.W, ah / R.H);
+  if (isSymView() && z < SYM_MIN) z = Math.max(SYM_MIN, Math.min(28, aw / R.W));
+  S.zoom = Math.max(zoomMin(), Math.min(ZOOM_MAX, Math.floor(z * 2) / 2));
+  syncZoomSlider(); st.scrollTo(0, 0); draw();
+  if (announce && isSymView() && layout().scrolls) toast("Symbols need room to be readable, so the chart scrolls. Pinch or use Zoom to resize.");
+}
+function zoomAt(z, cx, cy) {
+  if (!R) return;
+  const st = $("stage"), r = st.getBoundingClientRect(), L0 = draw.L || layout();
+  const fx = (cx - r.left + st.scrollLeft - L0.left0) / L0.cs, fy = (cy - r.top + st.scrollTop - L0.top0) / L0.cs;
+  S.zoom = Math.max(zoomMin(), Math.min(ZOOM_MAX, z));
+  syncZoomSlider();
+  const L = layout();
+  $("sizer").style.width = L.cw + "px"; $("sizer").style.height = L.ch + "px";
+  st.scrollLeft = L.left0 + fx * L.cs - (cx - r.left);
+  st.scrollTop = L.top0 + fy * L.cs - (cy - r.top);
+  draw();
+}
+(function wireStage() {
+  const st = $("stage");
+  st.addEventListener("scroll", requestDraw, { passive: true });
+  if (window.ResizeObserver) new ResizeObserver(requestDraw).observe(st);
+  st.addEventListener("wheel", e => { if (!e.ctrlKey || !R) return; e.preventDefault(); zoomAt((draw.L ? draw.L.cs : S.zoom) * Math.exp(-e.deltaY * 0.01), e.clientX, e.clientY); }, { passive: false });
+  let pinch = null;
+  const mid = t => ({ x: (t[0].clientX + t[1].clientX) / 2, y: (t[0].clientY + t[1].clientY) / 2, d: Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY) });
+  st.addEventListener("touchstart", e => { if (e.touches.length === 2 && R) { const m = mid(e.touches); pinch = { d: m.d, z: draw.L ? draw.L.cs : S.zoom }; } }, { passive: true });
+  st.addEventListener("touchmove", e => { if (!pinch || e.touches.length !== 2) return; e.preventDefault(); const m = mid(e.touches); zoomAt(pinch.z * m.d / pinch.d, m.x, m.y); }, { passive: false });
+  st.addEventListener("touchend", e => { if (e.touches.length < 2) pinch = null; });
+  let g0 = 0;
+  st.addEventListener("gesturestart", e => { e.preventDefault(); g0 = draw.L ? draw.L.cs : S.zoom; });
+  st.addEventListener("gesturechange", e => { e.preventDefault(); if (!pinch) zoomAt(g0 * e.scale, e.clientX, e.clientY); });
+})();
+
+// ---------- Stats, legend ----------
+function stitchLenCm(ct) { const cell = 2.54 / ct; return (2 * Math.SQRT2 * cell + 2 * cell) * 1.25; }
+function skeins(n) { const ct = parseFloat(S.fabricCount); return n * stitchLenCm(ct) / 2400; }
+function finishedText(W, H) { const ct = parseFloat(S.fabricCount); const wi = W / ct, hi = H / ct; return `${wi.toFixed(1)} × ${hi.toFixed(1)} in  ·  ${(wi * 2.54).toFixed(1)} × ${(hi * 2.54).toFixed(1)} cm`; }
+function renderStats() {
+  $("finished").textContent = "Finished size " + finishedText(S.width, S.height);
+  if (!R) return;
+  const total = R.counts.reduce((a, b) => a + b, 0);
+  const iso = R.isoBefore ? `<span>Stray single stitches <b>${fmt(R.isoBefore)}</b> → <b class="good">${fmt(R.isoAfter)}</b></span>` : "";
+  $("stats").innerHTML = `<span><b>${R.W} × ${R.H}</b> stitches</span><span><b>${R.pal.length}</b> colors</span><span><b>${fmt(total)}</b> stitched</span>${iso}`;
+}
+function renderLegend() {
+  if (!R) return;
+  const pal = R.pal.map(i => DMC[i]);
+  const total = R.counts.reduce((a, b) => a + b, 0);
+  const sk = R.counts.map(skeins);
+  const need = pal.filter(d => !OWN.has(d.code)).map(d => d.code);
+  $("legend-sum").textContent = `${pal.length} colors · ${sk.reduce((a, s) => a + Math.max(1, Math.ceil(s)), 0)} skeins (2 strands)` + (OWN.size ? ` · ${need.length ? need.length + " to buy" : "you own them all"}` : "");
+  const rows = pal.map((d, k) => {
+    const opts = pal.map((o, j) => ({ o, j, dist: labDist(d, o) })).filter(x => x.j !== k).sort((a, b) => a.dist - b.dist)
+      .map(x => `<option value="${x.o.code}">${x.o.code} · ${x.o.name}</option>`).join("");
+    const ink = lum(d) > 0.35 ? "#111" : "#fff";
+    return `<tr class="legend-row${highlight === k ? " on" : ""}" data-k="${k}">
+      <td><div class="sw" style="background:${d.hex}" title="Symbol for DMC ${d.code}">${symSVG(k, lum(d) > 0.3 ? "#111" : "#fff")}</div></td>
+      <td><span class="code">${d.code}</span>${R.accent[k] ? '<span class="tag">detail</span>' : ""}${R.kept && R.kept[k] ? '<span class="tag">kept</span>' : ""}</td>
+      <td>${d.name}</td>
+      <td class="n">${fmt(R.counts[k])}</td>
+      <td class="n" title="${sk[k].toFixed(2)} skeins">${Math.max(1, Math.ceil(sk[k]))}</td>
+      <td><button type="button" class="own-btn${S.pinned.includes(d.code) ? " on" : ""}" data-pin="${d.code}" aria-pressed="${S.pinned.includes(d.code)}" title="Always include this color, even with fewer colors">${S.pinned.includes(d.code) ? "✓ Kept" : "Keep"}</button></td>
+      <td><button type="button" class="own-btn${OWN.has(d.code) ? " on" : ""}" data-own="${d.code}" aria-pressed="${OWN.has(d.code)}">${OWN.has(d.code) ? "✓ Owned" : "+ Add"}</button></td>
+      <td><select data-from="${d.code}" aria-label="Merge DMC ${d.code} into another color"><option value="">No merge</option>${opts}</select></td></tr>`;
+  });
+  $("legend").innerHTML = rows.join("") || "";
+  $("btn-clear-hl").hidden = highlight < 0;
+  // Notes: manual merges and automatic merges
+  const ov = Object.entries(S.overrides);
+  let html = "";
+  if (ov.length) html += `<div class="chips">${ov.map(([a, b]) => `<span class="chip">${a} → ${b}<button type="button" data-undo="${a}" aria-label="Undo merge of ${a}">×</button></span>`).join("")}<button class="btn small" type="button" id="undo-all">Undo all merges</button></div>`;
+  const auto = (R.merges || []).filter(([a, b, n]) => n > 0);
+  if (auto.length) {
+    const shown = auto.slice(0, 60).map(([a, b, n]) => `<li>${DMC[a].code} (${n} stitch${n === 1 ? "" : "es"}) → ${DMC[b].code}</li>`).join("");
+    html += `<details class="merges"><summary>${auto.length} rare color${auto.length === 1 ? "" : "s"} folded into the nearest pattern color (minimum ${S.minStitches} stitches)</summary><ul>${shown}</ul></details>`;
+  }
+  if (R.keptUnused && R.keptUnused.length) html = `<p class="hint warn">${R.keptUnused.map(i => "DMC " + DMC[i].code).join(", ")} ${R.keptUnused.length === 1 ? "is" : "are"} set to keep, but no part of the picture is close enough to use ${R.keptUnused.length === 1 ? "it" : "them"}. Try a nearby shade.</p>` + html;
+  if (OWN.size && need.length) html = `<div class="buy"><span>To buy: <b>${need.join(", ")}</b></span><button class="btn small" type="button" id="copy-buy">Copy shopping list</button>${S.ownedOnly ? "" : '<button class="btn small" type="button" id="use-owned">Rebuild with only my threads</button>'}</div>` + html;
+  $("notes").innerHTML = html;
+}
+
+$("legend").addEventListener("change", e => {
+  const sel = e.target.closest("select[data-from]"); if (!sel || !sel.value) return;
+  S.overrides[sel.dataset.from] = sel.value; highlight = -1; schedule(0);
+  toast(`DMC ${sel.dataset.from} merged into ${sel.value}`);
+});
+$("legend").addEventListener("click", e => {
+  if (e.target.closest("select")) return;
+  const ob = e.target.closest("[data-own]"); if (ob) { toggleOwned(ob.dataset.own); return; }
+  const pb = e.target.closest("[data-pin]"); if (pb) { if (S.pinned.includes(pb.dataset.pin)) removePin(pb.dataset.pin); else addPin(pb.dataset.pin); return; }
+  const tr = e.target.closest("tr[data-k]"); if (!tr) return;
+  const k = +tr.dataset.k; highlight = highlight === k ? -1 : k; draw(); renderLegend();
+});
+$("notes").addEventListener("click", e => {
+  if (e.target.id === "copy-buy") { const need = R.pal.map(i => DMC[i]).filter(d => !OWN.has(d.code)).map(d => `DMC ${d.code} ${d.name}`); copyText(need.join("\n"), "Shopping list copied"); return; }
+  if (e.target.id === "use-owned") { S.ownedOnly = true; syncUI(); schedule(0); return; }
+  const u = e.target.closest("[data-undo]"); if (u) { delete S.overrides[u.dataset.undo]; schedule(0); }
+  if (e.target.id === "undo-all") { S.overrides = {}; schedule(0); }
+});
+$("btn-clear-hl").addEventListener("click", () => { highlight = -1; draw(); renderLegend(); });
+
+// Hover readout
+function cellAt(ev) {
+  if (!R || !draw.L) return null; const st = $("stage"), r = st.getBoundingClientRect(), L = draw.L;
+  const x = Math.floor((ev.clientX - r.left + st.scrollLeft - L.left0) / L.cs), y = Math.floor((ev.clientY - r.top + st.scrollTop - L.top0) / L.cs);
+  return x >= 0 && y >= 0 && x < R.W && y < R.H ? { x, y } : null;
+}
+function pickPool() { return S.ownedOnly && OWN.size ? [...OWN].map(c => DMC[CODE_IDX.get(c)]) : null; }
+$("chart").addEventListener("pointermove", e => {
+  const c = cellAt(e); if (!c) return;
+  if (pickMode) { const lab = sampleSource(c.x, c.y); if (lab) { const d = nearestThreads(lab, 1, pickPool())[0]; $("hover").textContent = `Tap to keep DMC ${d.code} ${d.name} (column ${c.x + 1}, row ${c.y + 1})`; } return; }
+  const k = R.grid[c.y * R.W + c.x];
+  $("hover").textContent = `Column ${c.x + 1}, row ${c.y + 1} · ` + (k < 0 ? "unstitched" : `DMC ${DMC[R.pal[k]].code} ${DMC[R.pal[k]].name}`);
+});
+$("chart").addEventListener("click", e => { const c = cellAt(e); if (!c) return;
+  if (pickMode) { const lab = sampleSource(c.x, c.y); setPickMode(false); if (!lab) { toast("That spot is transparent. Tap a colored area."); return; } addPin(nearestThreads(lab, 1, pickPool())[0].code, true); return; }
+  const k = R.grid[c.y * R.W + c.x]; if (k >= 0) { highlight = highlight === k ? -1 : k; draw(); renderLegend(); } });
+
+// ---------- Controls ----------
+const RANGES = { maxColors: v => v, hue: v => v + "%", accents: v => v === 0 ? "off" : v, minStitches: v => v <= 1 ? "off" : v, fabricTol: v => v,
+  specks: v => v === 0 ? "off" : v === 1 ? "1 stitch" : v + " stitches", dither: v => v === 0 ? "off" : v + "%",
+  sharpen: v => v === 0 ? "off" : v + "%", brightness: v => (v > 0 ? "+" : "") + v, contrast: v => (v > 0 ? "+" : "") + v, saturation: v => (v > 0 ? "+" : "") + v };
+function clampDim(v) { return Math.max(10, Math.min(500, v | 0)); }
+function syncUI() {
+  for (const k in RANGES) { $(k).value = S[k]; $(k + "-v").textContent = RANGES[k](+S[k]); }
+  $("w").value = S.width; $("h").value = S.height; $("count").value = S.fabricCount;
+  $("lock").setAttribute("aria-pressed", S.lock); $("skipFabric").checked = S.skipFabric; $("fabric").value = S.fabric;
+  $("fabric-opts").hidden = !S.skipFabric; $("ownedOnly").checked = S.ownedOnly; syncZoomSlider(); $("overlay").value = S.overlay;
+  document.querySelectorAll("#view button").forEach(b => b.setAttribute("aria-pressed", b.dataset.v === S.view));
+  document.querySelectorAll("input[type=range]").forEach(fillRange);
+  renderStats();
+}
+for (const k in RANGES) $(k).addEventListener("input", e => { S[k] = +e.target.value; $(k + "-v").textContent = RANGES[k](S[k]); schedule(); });
+let dimT = 0;
+function setDim(which, raw, commit) {
+  const v = parseInt(raw, 10);
+  if (!(v >= 10 && v <= 500)) { if (commit) syncUI(); return; }
+  if (which === "w") { S.width = v; if (S.lock && IMG) S.height = clampDim(Math.round(v * IMG.h / IMG.w)); }
+  else { S.height = v; if (S.lock && IMG) S.width = clampDim(Math.round(v * IMG.w / IMG.h)); }
+  if (which === "w") $("h").value = S.height; else $("w").value = S.width;
+  renderStats();
+  clearTimeout(dimT);
+  dimT = setTimeout(() => { needFit = true; schedule(0); }, commit ? 0 : 250);
+}
+$("w").addEventListener("input", e => setDim("w", e.target.value, false));
+$("h").addEventListener("input", e => setDim("h", e.target.value, false));
+$("w").addEventListener("change", e => { setDim("w", e.target.value, true); $("w").value = S.width; });
+$("h").addEventListener("change", e => { setDim("h", e.target.value, true); $("h").value = S.height; });
+$("lock").addEventListener("click", () => { S.lock = !S.lock; if (S.lock && IMG) S.height = clampDim(Math.round(S.width * IMG.h / IMG.w)); syncUI(); schedule(0); });
+$("count").addEventListener("change", e => { S.fabricCount = e.target.value; renderStats(); renderLegend(); saveLater(); });
+$("skipFabric").addEventListener("change", e => { S.skipFabric = e.target.checked; $("fabric-opts").hidden = !S.skipFabric; schedule(0); });
+$("fabric").addEventListener("input", e => { S.fabric = e.target.value; schedule(); });
+$("view").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  const was = isSymView(); S.view = b.dataset.v; syncUI();
+  if (isSymView() !== was) fitZoom(); else draw();
+  saveLater();
+});
+$("zoom").addEventListener("input", e => { const st = $("stage"), r = st.getBoundingClientRect(); zoomAt(+e.target.value, r.left + st.clientWidth / 2, r.top + st.clientHeight / 2); });
+$("overlay").addEventListener("input", e => { S.overlay = +e.target.value; draw(); });
+$("btn-fit").addEventListener("click", () => fitZoom(true));
+$("btn-reset").addEventListener("click", () => { const keep = { width: S.width, height: S.height, view: S.view, zoom: S.zoom }; S = Object.assign({}, DEFAULTS, keep, { overrides: {}, pinned: [] }); syncUI(); renderPins(); schedule(0); toast("Settings reset"); });
+$("btn-open").addEventListener("click", () => $("file").click());
+$("btn-sample").addEventListener("click", () => { S.overrides = {}; setImage(makeSample(), "Sample: sunset hills", false, "sample"); });
+const drop = $("drop");
+drop.addEventListener("click", () => $("file").click());
+drop.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("file").click(); } });
+$("file").addEventListener("change", e => { loadFile(e.target.files[0]); e.target.value = ""; });
+["dragenter", "dragover"].forEach(t => document.addEventListener(t, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave", "drop"].forEach(t => document.addEventListener(t, e => { e.preventDefault(); drop.classList.remove("over"); }));
+document.addEventListener("drop", e => { const f = e.dataTransfer && e.dataTransfer.files[0]; if (f) loadFile(f); });
+document.addEventListener("paste", e => { const it = [...(e.clipboardData ? e.clipboardData.items : [])].find(i => i.type.startsWith("image/")); if (it) loadFile(it.getAsFile()); });
+window.addEventListener("resize", requestDraw);
+
+// ---------- Persistence ----------
+let saveT = 0, imgT = 0;
+function saveLater() { clearTimeout(saveT); saveT = setTimeout(() => store.set("csp.settings", JSON.stringify(S)), 400); }
+function storeImageLater() { clearTimeout(imgT); imgT = setTimeout(() => { if (!IMG) return; const url = IMG.canvas.toDataURL("image/jpeg", 0.88); if (url.length < 2.5e6) { store.set("csp.image", url); store.set("csp.imageName", IMG.name); } }, 600); }
+
+// ---------- Export ----------
+async function saveFile(name, blob) {
+  if (window.claude && typeof window.claude.use === "function") {
+    let dl = null; try { dl = await window.claude.use("downloads"); } catch (e) { }
+    if (!dl) { toast("Saving files isn't available in this view."); return; }
+    try { await dl.save({ filename: name, data: blob }); toast("Saved " + name); }
+    catch (e) { toast(e && e.code === "declined" ? "Save cancelled" : "Couldn't save: " + ((e && e.message) || "unknown error")); }
+    return;
+  }
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+  toast("Saved " + name);
+}
+const baseName = () => (IMG ? IMG.name.replace(/\.[^.]+$/, "") : "pattern").replace(/[^\w\- ]+/g, "").trim().slice(0, 60) || "pattern";
+const toBlob = c => new Promise(r => c.toBlob(r, "image/png"));
+
+function drawLegendRows(ctx, x, y, w, rowH, from, to, scale = 1) {
+  const pal = R.pal.map(i => DMC[i]);
+  ctx.textBaseline = "middle";
+  ctx.font = `600 ${11 * scale}px ui-sans-serif, system-ui, sans-serif`; ctx.fillStyle = "#666"; ctx.textAlign = "left";
+  const cols = [x, x + 50 * scale, x + 140 * scale, x + w - 150 * scale, x + w - 40 * scale];
+  ctx.fillText("KEY", cols[0], y + rowH / 2); ctx.fillText("DMC", cols[1], y + rowH / 2); ctx.fillText("NAME", cols[2], y + rowH / 2);
+  ctx.textAlign = "right"; ctx.fillText("STITCHES", cols[3] + 60 * scale, y + rowH / 2); ctx.fillText("SKEINS", cols[4] + 30 * scale, y + rowH / 2);
+  y += rowH;
+  for (let k = from; k < to; k++) {
+    const d = pal[k], cy = y + rowH / 2, s = rowH - 8 * scale;
+    ctx.fillStyle = "#dddddd"; ctx.fillRect(x, y + rowH - 1, w, 1);
+    ctx.fillStyle = tint(d, 0.42); ctx.fillRect(cols[0], cy - s / 2, s, s);
+    ctx.fillStyle = d.hex; ctx.fillRect(cols[0] + s + 4 * scale, cy - s / 2, s * 0.55, s);
+    drawSymbol(ctx, k, cols[0] + s * 0.12, cy - s * 0.38, s * 0.76, "#111");
+    ctx.textAlign = "left"; ctx.font = `500 ${13 * scale}px ui-monospace, Menlo, monospace`; ctx.fillText(d.code + (R.accent[k] ? " *" : ""), cols[1], cy);
+    ctx.font = `${13 * scale}px ui-sans-serif, system-ui, sans-serif`; ctx.fillText(d.name, cols[2], cy);
+    ctx.textAlign = "right"; ctx.font = `500 ${13 * scale}px ui-monospace, Menlo, monospace`;
+    ctx.fillText(fmt(R.counts[k]), cols[3] + 60 * scale, cy); ctx.fillText(String(Math.max(1, Math.ceil(skeins(R.counts[k])))), cols[4] + 30 * scale, cy);
+    y += rowH;
+  }
+  return y;
+}
+
+async function exportPNG() {
+  if (!R) return;
+  let cs = Math.max(8, Math.min(20, Math.floor(Math.sqrt(40e6 / (R.W * R.H)))));
+  const m = 40, rowH = 30, legendH = (R.pal.length + 1) * rowH + 70;
+  const cw = Math.max(R.W * cs + 2 * m, 720), ch = R.H * cs + 2 * m + legendH;
+  const c = document.createElement("canvas"); c.width = cw; c.height = ch;
+  const ctx = c.getContext("2d"); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cw, ch);
+  drawRegion(ctx, m, m, cs, 0, 0, R.W, R.H, "symbols", { print: true, grid: true, numbers: true, numberSize: 13, numberColor: "#444" });
+  let y = R.H * cs + 2 * m;
+  ctx.fillStyle = "#111"; ctx.font = "700 20px ui-sans-serif, system-ui, sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+  ctx.fillText(`${baseName()} · ${R.W} × ${R.H} stitches · ${R.pal.length} DMC colors`, m, y + 10);
+  drawLegendRows(ctx, m, y + 24, Math.min(cw - 2 * m, 760), rowH, 0, R.pal.length);
+  saveFile(baseName() + " chart.png", await toBlob(c));
+}
+
+async function exportPDF() {
+  if (!R) return;
+  if (!window.jspdf) { toast("The PDF tool didn't load. Check your connection and reload the page."); return; }
+  toast("Building PDF…");
+  await new Promise(r => setTimeout(r, 30));
+  const DPI = 150, PW = 1275, PH = 1650, M = 75;
+  const pages = [];
+  const newPage = () => { const c = document.createElement("canvas"); c.width = PW; c.height = PH; const x = c.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, PW, PH); pages.push(c); return x; };
+  // Cover: preview + facts + legend
+  let x = newPage();
+  x.fillStyle = "#111"; x.textBaseline = "alphabetic"; x.textAlign = "left";
+  x.font = "700 34px ui-sans-serif, system-ui, sans-serif"; x.fillText(baseName(), M, M + 30);
+  x.font = "18px ui-sans-serif, system-ui, sans-serif"; x.fillStyle = "#444";
+  const total = R.counts.reduce((a, b) => a + b, 0);
+  x.fillText(`${R.W} × ${R.H} stitches · ${R.pal.length} DMC colors · ${fmt(total)} stitches · ${finishedText(R.W, R.H)} on ${$("count").selectedOptions[0].textContent}`, M, M + 62);
+  const box = { w: PW - 2 * M, h: 620 }, ps = Math.min(box.w / R.W, box.h / R.H);
+  const pw = R.W * ps, ph = R.H * ps, px = M + (box.w - pw) / 2, py = M + 90;
+  const tmp = document.createElement("canvas"); tmp.width = R.W; tmp.height = R.H; const tctx = tmp.getContext("2d");
+  const idata = tctx.createImageData(R.W, R.H), FAB = [244, 242, 236];
+  for (let i = 0; i < R.grid.length; i++) { const k = R.grid[i], d = k >= 0 ? DMC[R.pal[k]] : null; idata.data[i * 4] = d ? d.r : FAB[0]; idata.data[i * 4 + 1] = d ? d.g : FAB[1]; idata.data[i * 4 + 2] = d ? d.b : FAB[2]; idata.data[i * 4 + 3] = 255; }
+  tctx.putImageData(idata, 0, 0);
+  x.imageSmoothingEnabled = false; x.drawImage(tmp, px, py, pw, ph); x.imageSmoothingEnabled = true;
+  x.strokeStyle = "#999"; x.lineWidth = 1; x.strokeRect(px, py, pw, ph);
+  const rowH = 30; let y = py + ph + 40, k = 0;
+  const perPage = rows => Math.floor(rows / rowH) - 1;
+  while (k < R.pal.length) {
+    const n = Math.max(1, perPage(PH - M - y));
+    const to = Math.min(R.pal.length, k + n);
+    drawLegendRows(x, M, y, PW - 2 * M, rowH, k, to, 1);
+    k = to;
+    if (k < R.pal.length) { x = newPage(); y = M; }
+  }
+  if (R.accent.some(Boolean)) { x.fillStyle = "#666"; x.font = "14px ui-sans-serif, system-ui, sans-serif"; x.textAlign = "left"; x.fillText("* small detail color, kept below the minimum stitch count", M, PH - M + 30); }
+  // Chart pages
+  const cs = 15, num = 36, colsPer = Math.floor((PW - 2 * M - num) / cs), rowsPer = Math.floor((PH - 2 * M - num - 40) / cs);
+  const tilesX = Math.ceil(R.W / colsPer), tilesY = Math.ceil(R.H / rowsPer), chartPages = tilesX * tilesY;
+  let p = 0;
+  for (let ty = 0; ty < tilesY; ty++) for (let tx = 0; tx < tilesX; tx++) {
+    p++;
+    const x0 = tx * colsPer, y0 = ty * rowsPer, x1 = Math.min(R.W, x0 + colsPer), y1 = Math.min(R.H, y0 + rowsPer);
+    x = newPage();
+    x.fillStyle = "#222"; x.font = "600 18px ui-sans-serif, system-ui, sans-serif"; x.textAlign = "left"; x.textBaseline = "alphabetic";
+    x.fillText(`Chart ${p} of ${chartPages}`, M, M + 14);
+    x.font = "16px ui-sans-serif, system-ui, sans-serif"; x.fillStyle = "#555"; x.textAlign = "right";
+    x.fillText(`Columns ${x0 + 1}–${x1}  ·  Rows ${y0 + 1}–${y1}`, PW - M, M + 14);
+    drawRegion(x, M + num, M + 40 + num, cs, x0, y0, x1, y1, "symbols", { print: true, grid: true, numbers: true, numberSize: 13, numberColor: "#333" });
+    x.strokeStyle = "#111"; x.lineWidth = 2; x.strokeRect(M + num, M + 40 + num, (x1 - x0) * cs, (y1 - y0) * cs);
+  }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: "in", format: "letter", compress: true });
+  pages.forEach((c, i) => { if (i) doc.addPage(); doc.addImage(c.toDataURL("image/png"), "PNG", 0, 0, 8.5, 11, undefined, "FAST"); });
+  saveFile(baseName() + " pattern.pdf", doc.output("blob"));
+}
+async function saveProject() {
+  if (!IMG) return;
+  const p = { app: "cross-stitch-pattern-generator", version: 1, name: IMG.name, settings: S, image: IMG.canvas.toDataURL("image/jpeg", 0.9) };
+  saveFile(baseName() + ".json", new Blob([JSON.stringify(p)], { type: "application/json" }));
+}
+$("btn-png").addEventListener("click", exportPNG);
+$("btn-pdf").addEventListener("click", exportPDF);
+$("btn-save").addEventListener("click", saveProject);
+
+let toastT = 0;
+let toastAction = null;
+function toast(msg, action) {
+  const t = $("toast"), b = $("toast-act");
+  $("toast-msg").textContent = msg; toastAction = action || null;
+  b.hidden = !action; if (action) b.textContent = action.label;
+  t.classList.add("on"); clearTimeout(toastT);
+  toastT = setTimeout(() => { t.classList.remove("on"); toastAction = null; }, action ? 6000 : 2600);
+}
+$("toast-act").addEventListener("click", () => { const a = toastAction; toastAction = null; $("toast").classList.remove("on"); if (a) a.fn(); });
+async function copyText(text, okMsg) {
+  try { await navigator.clipboard.writeText(text); toast(okMsg); }
+  catch (e) { const ta = document.createElement("textarea"); ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta); ta.select();
+    let ok = false; try { ok = document.execCommand("copy"); } catch (e2) { } ta.remove(); toast(ok ? okMsg : "Copying isn't allowed here. Your list: " + text.slice(0, 120)); }
+}
+
+// ---------- Threads I own ----------
+const OWN = new Set();
+const CODE_LC = new Map(DMC.map(d => [d.code.toLowerCase(), d.code]));
+CODE_LC.set("blanc", "White");
+const codeSort = (a, b) => { const na = parseInt(a, 10), nb = parseInt(b, 10); return (isNaN(na) ? -1 : na) - (isNaN(nb) ? -1 : nb) || a.localeCompare(b); };
+const SYNC = { ref: null, writing: false, dirty: false, timer: 0, ready: false, failed: false };
+let invTab = "owned";
+
+function ownedChanged() {
+  store.set("csp.owned", JSON.stringify([...OWN]));
+  renderOwnSummary();
+  if (!$("inv").hidden) renderInventory();
+  renderLegend();
+  if (S.ownedOnly) schedule(0);
+}
+function addCodes(codes) { let n = 0; for (const c of codes) if (CODE_IDX.has(c) && !OWN.has(c)) { OWN.add(c); n++; } if (n) ownedChanged(); return n; }
+function removeCodes(codes) {
+  const gone = codes.filter(c => OWN.delete(c));
+  if (!gone.length) return;
+  ownedChanged();
+  toast(gone.length === 1 ? `Removed DMC ${gone[0]}` : `Removed ${gone.length} threads`, { label: "Undo", fn: () => addCodes(gone) });
+}
+function toggleOwned(code, quiet) {
+  if (OWN.has(code)) removeCodes([code]);
+  else { addCodes([code]); if (!quiet) toast(`Added DMC ${code} to your threads`); }
+}
+
+function syncNote() { return "Saved privately in this browser on this device."; }
+function renderOwnSummary() {
+  const n = OWN.size;
+  $("own-summary").textContent = n
+    ? `${n} thread${n === 1 ? "" : "s"} in your list. ${syncNote()}`
+    : "Add the threads you have, then turn this on to build patterns from them only.";
+  $("btn-inv-top").textContent = n ? `My threads (${n})` : "My threads";
+  $("inv-sync").textContent = syncNote();
+}
+
+function parseCodes(q) {
+  const found = [], missing = [];
+  for (const t of q.split(/[\s,;]+/).filter(Boolean)) {
+    const c = CODE_LC.get(t.toLowerCase().replace(/^dmc[-#]?/, ""));
+    if (c) { if (!found.includes(c)) found.push(c); } else missing.push(t);
+  }
+  return { found, missing };
+}
+function invMatches(d, q) {
+  if (!q) return true;
+  const ql = q.toLowerCase(), toks = ql.split(/[\s,;]+/).filter(Boolean).map(t => t.replace(/^dmc[-#]?/, ""));
+  if (d.name.toLowerCase().includes(ql)) return true;
+  if (toks.length > 1) return toks.some(t => d.code.toLowerCase() === t);
+  return toks.length === 1 && d.code.toLowerCase().startsWith(toks[0]);
+}
+// Color families for browsing all DMC threads.
+const FAMILIES = [["reds", "Reds"], ["pinks", "Pinks"], ["oranges", "Oranges"], ["yellows", "Yellows"], ["greens", "Greens"], ["teals", "Teals"], ["blues", "Blues"], ["purples", "Purples"], ["browns", "Browns and tans"], ["neutrals", "Whites, grays and black"]];
+function familyOf(d) {
+  const r = d.r / 255, g = d.g / 255, b = d.b / 255, mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, c = mx - mn;
+  const s = c === 0 ? 0 : c / (1 - Math.abs(2 * l - 1));
+  let h = 0;
+  if (c) { h = mx === r ? ((g - b) / c) % 6 : mx === g ? (b - r) / c + 2 : (r - g) / c + 4; h = (h * 60 + 360) % 360; }
+  if (s < 0.14 || c < 0.06) return "neutrals";
+  if (h >= 12 && h < 55 && (l < 0.42 || (s < 0.5 && l < 0.82))) return "browns";
+  if (h >= 345 || h < 12) return l > 0.72 ? "pinks" : "reds";
+  if (h < 42) return "oranges";
+  if (h < 68) return "yellows";
+  if (h < 168) return "greens";
+  if (h < 200) return "teals";
+  if (h < 252) return "blues";
+  if (h < 322) return "purples";
+  return "pinks";
+}
+DMC.forEach(d => { d.family = familyOf(d); d.L = d.lab[0]; });
+function tileHTML(d, ownedTab) {
+  const on = OWN.has(d.code);
+  return `<button type="button" class="tile${on ? " on" : ""}" data-code="${d.code}" aria-pressed="${on}" aria-label="DMC ${d.code} ${d.name}, tap to ${ownedTab || on ? "remove" : "add"}">` +
+    `<span class="tile-sw" style="background:${d.hex}"><span class="tile-mark" aria-hidden="true">${ownedTab ? "×" : "✓"}</span></span>` +
+    `<span class="tile-code">${d.code}</span><span class="tile-name">${d.name}</span></button>`;
+}
+function renderInventory() {
+  const q = $("inv-q").value.trim(), grid = $("inv-grid"), ownedTab = invTab === "owned";
+  document.querySelectorAll("#inv-tabs button").forEach(b => {
+    b.setAttribute("aria-pressed", b.dataset.t === invTab);
+    b.textContent = b.dataset.t === "owned" ? `My threads (${OWN.size})` : `All DMC (${DMC.length})`;
+  });
+  grid.classList.toggle("owned", ownedTab);
+  const showFamilies = !ownedTab && !q;
+  $("inv-fams").hidden = !showFamilies;
+  const list = (ownedTab ? [...OWN].sort(codeSort).map(c => DMC[CODE_IDX.get(c)]) : DMC).filter(d => invMatches(d, q));
+  if (!list.length) {
+    grid.innerHTML = `<p class="hint inv-empty">${ownedTab && !OWN.size
+      ? "Your list is empty. Type the numbers from your skein labels above, or open All DMC and tap the colors you have."
+      : q ? "No threads match. Clear the box to see everything." : "Nothing here yet."}</p>`;
+    return;
+  }
+  if (!showFamilies) { grid.innerHTML = `<div class="tiles">${list.map(d => tileHTML(d, ownedTab)).join("")}</div>`; return; }
+  grid.innerHTML = FAMILIES.map(([id, label]) => {
+    const items = list.filter(d => d.family === id).sort((a, b) => b.L - a.L);
+    if (!items.length) return "";
+    const have = items.filter(d => OWN.has(d.code)).length;
+    return `<section class="fam" id="fam-${id}"><h4>${label}<span>${have ? have + " of " : ""}${items.length}</span></h4><div class="tiles">${items.map(d => tileHTML(d, false)).join("")}</div></section>`;
+  }).join("");
+}
+$("inv-fams").innerHTML = FAMILIES.map(([id, label]) => {
+  const sample = DMC.filter(d => d.family === id).sort((a, b) => Math.abs(a.L - 0.6) - Math.abs(b.L - 0.6))[0];
+  return `<button type="button" class="fam-chip" data-fam="${id}"><i style="background:${sample ? sample.hex : "#999"}"></i>${label.split(",")[0].replace(" and tans", "")}</button>`;
+}).join("");
+$("inv-fams").addEventListener("click", e => {
+  const b = e.target.closest("[data-fam]"); if (!b) return;
+  const sec = $("fam-" + b.dataset.fam); if (sec) $("inv-scroll").scrollTo({ top: sec.offsetTop, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+});
+function invSubmit() {
+  const box = $("inv-q"), q = box.value.trim();
+  if (!q) { box.focus(); return; }
+  const { found, missing } = parseCodes(q);
+  if (!found.length) { $("inv-msg").textContent = "No DMC numbers there. Tap a matching color below to add it."; return; }
+  const n = addCodes(found), already = found.length - n;
+  const parts = [];
+  if (n) parts.push(`Added ${n} thread${n === 1 ? "" : "s"}`);
+  if (already) parts.push(`${already} already in your list`);
+  if (missing.length) parts.push(`not DMC numbers: ${missing.slice(0, 8).join(", ")}`);
+  $("inv-msg").textContent = parts.join(" · ") + ".";
+  box.value = "";
+  renderInventory();
+  if (matchMedia("(pointer: fine)").matches) box.focus();
+}
+function openInv(tab) {
+  invTab = tab || (OWN.size ? "owned" : "all");
+  $("inv").hidden = false; document.body.style.overflow = "hidden";
+  $("inv-msg").textContent = "Tap a color to add or remove it. Type several numbers and press Add to add them all at once.";
+  renderOwnSummary(); renderInventory();
+  if (matchMedia("(pointer: fine)").matches) setTimeout(() => $("inv-q").focus(), 30);
+}
+function closeInv() { $("inv").hidden = true; document.body.style.overflow = ""; disarmClear(); }
+
+$("btn-inv").addEventListener("click", () => openInv());
+$("btn-inv-top").addEventListener("click", () => openInv());
+$("inv-close").addEventListener("click", closeInv);
+$("inv").addEventListener("click", e => { if (e.target.id === "inv") closeInv(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("inv").hidden) closeInv(); });
+$("inv-q").addEventListener("input", renderInventory);
+$("inv-q").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); invSubmit(); } });
+$("inv-addbtn").addEventListener("click", invSubmit);
+$("inv-tabs").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; invTab = b.dataset.t; renderInventory(); $("inv-scroll").scrollTop = 0; });
+$("inv-grid").addEventListener("click", e => {
+  const t = e.target.closest(".tile"); if (!t) return;
+  const code = t.dataset.code;
+  if (OWN.has(code)) removeCodes([code]); else { addCodes([code]); $("inv-msg").textContent = `Added DMC ${code}.`; }
+});
+$("inv-from-pattern").addEventListener("click", () => {
+  if (!R) return;
+  const n = addCodes(R.pal.map(i => DMC[i].code));
+  $("inv-msg").textContent = n ? `Added ${n} thread${n === 1 ? "" : "s"} from this pattern.` : "You already own every thread in this pattern.";
+});
+$("inv-copy").addEventListener("click", () => {
+  if (!OWN.size) { toast("Your list is empty"); return; }
+  copyText([...OWN].sort(codeSort).join(", "), `Copied ${OWN.size} thread numbers`);
+});
+let clearT = 0;
+function disarmClear() { const b = $("inv-clear"); b.classList.remove("armed"); b.textContent = "Clear list"; clearTimeout(clearT); }
+$("inv-clear").addEventListener("click", () => {
+  const b = $("inv-clear");
+  if (!OWN.size) return;
+  if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = `Tap again to remove all ${OWN.size}`; clearT = setTimeout(disarmClear, 3500); return; }
+  disarmClear();
+  const all = [...OWN]; OWN.clear(); ownedChanged();
+  toast(`Cleared ${all.length} threads`, { label: "Undo", fn: () => addCodes(all) });
+});
+$("ownedOnly").addEventListener("change", e => {
+  S.ownedOnly = e.target.checked;
+  if (S.ownedOnly && !OWN.size) { toast("Add the threads you own first"); openInv("all"); }
+  schedule(0);
+});
+
+// ---------- Colors to keep ----------
+let pickMode = false;
+const pinCode = c => CODE_IDX.has(c);
+function hueWeight() { return 1 + S.hue / 100 * 1.5; }
+function threadDist(lab, d, cw) { const x = lab[0] - d.lab[0], y = (lab[1] - d.lab[1]) * cw, z = (lab[2] - d.lab[2]) * cw; return x * x + y * y + z * z; }
+function nearestThreads(lab, n, pool) {
+  const cw = hueWeight();
+  return (pool || DMC).map(d => ({ d, e: threadDist(lab, d, cw) })).sort((a, b) => a.e - b.e).slice(0, n).map(x => x.d);
+}
+// Average the original photo's pixels under one stitch, in linear light.
+function sampleSource(x, y) {
+  const ctx = IMG.canvas.getContext("2d", { willReadFrequently: true });
+  const sx = IMG.w / R.W, sy = IMG.h / R.H;
+  const x0 = Math.max(0, Math.floor(x * sx)), y0 = Math.max(0, Math.floor(y * sy));
+  const w = Math.max(1, Math.min(IMG.w - x0, Math.ceil(sx))), h = Math.max(1, Math.min(IMG.h - y0, Math.ceil(sy)));
+  const px = ctx.getImageData(x0, y0, w, h).data;
+  let r = 0, g = 0, b = 0, a = 0;
+  for (let i = 0; i < px.length; i += 4) { const al = px[i + 3] / 255; r += toLin(px[i]) * al; g += toLin(px[i + 1]) * al; b += toLin(px[i + 2]) * al; a += al; }
+  if (a < 0.01) return null;
+  const enc = v => { v = Math.max(0, Math.min(1, v / a)); return Math.round(255 * (v <= 0.0031308 ? 12.92 * v : 1.055 * Math.pow(v, 1 / 2.4) - 0.055)); };
+  return oklabOf({ r: enc(r), g: enc(g), b: enc(b) });
+}
+function addPin(code, from) {
+  if (!pinCode(code)) return false;
+  if (S.pinned.includes(code)) { toast(`DMC ${code} is already kept`); return false; }
+  S.pinned.push(code);
+  const d = DMC[CODE_IDX.get(code)];
+  renderPins(); schedule(0);
+  toast(`Keeping DMC ${d.code} ${d.name}${from ? " from the photo" : ""}`, { label: "Swap shade", fn: () => openSwap(code) });
+  return true;
+}
+function removePin(code) {
+  const i = S.pinned.indexOf(code); if (i < 0) return;
+  S.pinned.splice(i, 1); renderPins(); schedule(0);
+  toast(`DMC ${code} is no longer kept`, { label: "Undo", fn: () => { if (!S.pinned.includes(code)) { S.pinned.splice(i, 0, code); renderPins(); schedule(0); } } });
+}
+function renderPins() {
+  const box = $("pin-chips");
+  $("pin-v").textContent = S.pinned.length ? S.pinned.length : "none";
+  box.innerHTML = S.pinned.map(c => {
+    const d = DMC[CODE_IDX.get(c)];
+    return `<span class="chip pin-chip"><button type="button" class="pin-sw" data-swap="${c}" title="Swap for a nearby shade" aria-label="DMC ${c} ${d.name}, swap for a nearby shade"><i style="background:${d.hex}"></i>${c}</button><button type="button" data-unpin="${c}" aria-label="Stop keeping DMC ${c}">×</button></span>`;
+  }).join("");
+  if (!$("pin-swap").hidden && !S.pinned.includes($("pin-swap").dataset.code)) $("pin-swap").hidden = true;
+}
+function openSwap(code) {
+  const d = DMC[CODE_IDX.get(code)], panel = $("pin-swap");
+  const near = nearestThreads(d.lab, 9).filter(o => o.code !== code).slice(0, 8);
+  panel.dataset.code = code;
+  panel.innerHTML = `<div class="row-head"><span>Swap <b>DMC ${code}</b> for a nearby shade</span><button type="button" class="btn small" data-swap-close>Close</button></div>
+    <div class="swap-grid">${near.map(o => `<button type="button" class="swap-opt${OWN.has(o.code) ? " owned" : ""}" data-to="${o.code}" title="DMC ${o.code} ${o.name}${OWN.has(o.code) ? " (owned)" : ""}"><i style="background:${o.hex}"></i><span>${o.code}</span></button>`).join("")}</div>`;
+  panel.hidden = false;
+}
+function setPickMode(on) {
+  pickMode = on && !!R;
+  $("pick-banner").hidden = !pickMode;
+  $("stage").classList.toggle("picking", pickMode);
+  $("btn-pick-top").setAttribute("aria-pressed", pickMode);
+  draw();
+}
+
+$("btn-pick").addEventListener("click", () => setPickMode(!pickMode));
+$("btn-pick-top").addEventListener("click", () => setPickMode(!pickMode));
+$("pick-cancel").addEventListener("click", () => setPickMode(false));
+document.addEventListener("keydown", e => { if (e.key === "Escape" && pickMode) setPickMode(false); });
+$("pin-chips").addEventListener("click", e => {
+  const u = e.target.closest("[data-unpin]"); if (u) { removePin(u.dataset.unpin); return; }
+  const s = e.target.closest("[data-swap]"); if (s) { const p = $("pin-swap"); if (!p.hidden && p.dataset.code === s.dataset.swap) p.hidden = true; else openSwap(s.dataset.swap); }
+});
+$("pin-swap").addEventListener("click", e => {
+  if (e.target.closest("[data-swap-close]")) { $("pin-swap").hidden = true; return; }
+  const o = e.target.closest("[data-to]"); if (!o) return;
+  const from = $("pin-swap").dataset.code, to = o.dataset.to, i = S.pinned.indexOf(from);
+  if (i < 0) return;
+  if (S.pinned.includes(to)) S.pinned.splice(i, 1); else S.pinned[i] = to;
+  $("pin-swap").hidden = true; renderPins(); schedule(0);
+  toast(`Now keeping DMC ${to} instead of ${from}`);
+});
+function pinFromInput() {
+  const v = $("pin-q").value.trim(); if (!v) return;
+  const { found, missing } = parseCodes(v);
+  if (!found.length) { toast(`${missing[0]} isn't a DMC number`); return; }
+  found.forEach(c => { if (!S.pinned.includes(c)) S.pinned.push(c); });
+  $("pin-q").value = ""; renderPins(); schedule(0);
+  toast(found.length === 1 ? `Keeping DMC ${found[0]}` : `Keeping ${found.length} colors`);
+}
+$("pin-addbtn").addEventListener("click", pinFromInput);
+$("pin-q").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); pinFromInput(); } });
+$("dmc-list").innerHTML = DMC.map(d => `<option value="${d.code}">${d.name}</option>`).join("");
+
+// ---------- Your data (this browser only) ----------
+// Everything stays in the browser on this device and is private to whoever uses it.
+// A backup file moves it to another device: save it here, open it there.
+const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => { }); } catch (e) { }
+async function saveBackup() {
+  const b = { app: "cross-stitch-pattern-generator", kind: "backup", version: 1, savedAt: Date.now(),
+    owned: [...OWN].sort(codeSort), settings: S, theme: THEME,
+    pattern: IMG && IMG.id !== "sample" ? { name: IMG.name, image: IMG.canvas.toDataURL(IMG.alpha ? "image/png" : "image/jpeg", 0.9) } : null };
+  const d = new Date(), stamp = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  saveFile(`Cross stitch backup ${stamp}.json`, new Blob([JSON.stringify(b)], { type: "application/json" }));
+}
+async function restoreBackup(b) {
+  const before = [...OWN];
+  OWN.clear(); (b.owned || []).forEach(c => { if (CODE_IDX.has(c)) OWN.add(c); });
+  if (b.theme) { Object.assign(THEME, b.theme); saveTheme(); applyTheme(); }
+  if (b.pattern && b.pattern.image) {
+    Object.assign(S, DEFAULTS, b.settings || {}); S.overrides = (b.settings || {}).overrides || {}; S.pinned = (b.settings || {}).pinned || [];
+    renderPins(); await loadURL(b.pattern.image, b.pattern.name || "Restored pattern", true);
+  }
+  ownedChanged();
+  toast(`Restored ${OWN.size} threads${b.pattern ? " and your pattern" : ""}`, { label: "Undo threads", fn: () => { OWN.clear(); before.forEach(c => OWN.add(c)); ownedChanged(); } });
+}
+$("data-backup").addEventListener("click", saveBackup);
+$("data-restore").addEventListener("click", () => $("file").click());
+
+// ---------- Boot ----------
+(function boot() {
+  try { const saved = JSON.parse(store.get("csp.settings") || "null"); if (saved) S = Object.assign({}, DEFAULTS, saved, { overrides: saved.overrides || {}, pinned: Array.isArray(saved.pinned) ? saved.pinned : [] }); } catch (e) { }
+  try { const own = JSON.parse(store.get("csp.owned") || "[]"); own.forEach(c => { if (CODE_IDX.has(c)) OWN.add(c); }); } catch (e) { }
+  syncUI(); renderOwnSummary(); renderPins();
+  const img = store.get("csp.image");
+  const local = img ? loadURL(img, store.get("csp.imageName") || "Last image", true, store.get("csp.imageId") || undefined) : Promise.resolve(false);
+  local.then(ok => { if (!ok) setImage(makeSample(), "Sample: sunset hills", false, "sample"); });
+})();
+</script>
+
+</body>
+</html>
